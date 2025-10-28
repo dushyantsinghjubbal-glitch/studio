@@ -29,7 +29,7 @@ export default function Home() {
   };
 
   const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(
-    "I just created a 'Hello' PDF with WhatsPDF!"
+    "I just created a PDF with WhatsPDF!"
   )}`;
 
   return (
