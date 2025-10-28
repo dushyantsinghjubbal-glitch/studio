@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Share2, FileText, Loader2, RefreshCw, BotMessageSquare } from 'lucide-react';
+import { Download, Share2, FileText, Loader2, RefreshCw, BotMessageSquare, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { generatePdfAction } from './actions';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [pdfData, setPdfData] = useState<{ file: string; fileName: string } | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   const handleGenerate = async () => {
     setIsLoading(true);
@@ -74,6 +76,25 @@ export default function Home() {
         </CardContent>
         {pdfData && !isLoading && (
           <CardFooter className="flex-col sm:flex-row gap-3 p-4 bg-muted/50 border-t">
+            <Dialog open={isViewerOpen} onOpenChange={setIsViewerOpen}>
+              <DialogTrigger asChild>
+                <Button variant="secondary" className="w-full rounded-lg">
+                  <Eye className="mr-2 h-4 w-4" /> View
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl h-[90vh] p-0">
+                <DialogHeader className="p-4 border-b">
+                  <DialogTitle>{pdfData.fileName}</DialogTitle>
+                </DialogHeader>
+                <div className="h-full">
+                  <iframe
+                    src={`data:application/pdf;base64,${pdfData.file}`}
+                    className="w-full h-full"
+                    title={pdfData.fileName}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
             <Button asChild className="w-full rounded-lg">
               <a href={`data:application/pdf;base64,${pdfData.file}`} download={pdfData.fileName}>
                 <Download className="mr-2 h-4 w-4" /> Download
