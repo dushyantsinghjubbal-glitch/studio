@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { generatePdfAction } from './actions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [pdfData, setPdfData] = useState<{ file: string; fileName: string } | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleGenerate = async () => {
     setIsLoading(true);
@@ -20,7 +22,11 @@ export default function Home() {
       setPdfData(result);
     } catch (error) {
       console.error(error);
-      // Optionally, show a toast notification for the error
+      toast({
+        variant: 'destructive',
+        title: 'Uh oh! Something went wrong.',
+        description: 'There was a problem generating your PDF.',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -30,9 +36,43 @@ export default function Home() {
     setPdfData(null);
   };
 
-  const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(
-    "I just created a PDF with WhatsPDF!"
-  )}`;
+  const handleShare = async () => {
+    if (!pdfData) return;
+
+    // Convert base64 to a Blob
+    const byteCharacters = atob(pdfData.file);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    const file = new File([blob], pdfData.fileName, { type: 'application/pdf' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'My Awesome Document',
+          text: 'Check out this PDF I created!',
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Sharing failed',
+          description: 'Could not share the PDF. Please try downloading it instead.',
+        });
+      }
+    } else {
+       toast({
+        variant: 'destructive',
+        title: 'Sharing not supported',
+        description: "Your browser doesn't support sharing files directly. Please download the PDF to share it.",
+      });
+    }
+  };
+
 
   return (
     <main className="flex min-h-screen w-full items-center justify-center bg-background p-4 sm:p-6">
@@ -100,10 +140,8 @@ export default function Home() {
                 <Download className="mr-2 h-4 w-4" /> Download
               </a>
             </Button>
-            <Button asChild variant="outline" className="w-full rounded-lg">
-              <a href={whatsappShareUrl} target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" className="w-full rounded-lg" onClick={handleShare}>
                 <Share2 className="mr-2 h-4 w-4" /> Share
-              </a>
             </Button>
             <Button variant="ghost" size="icon" onClick={handleReset} className="rounded-lg">
               <RefreshCw className="h-5 w-5" />
