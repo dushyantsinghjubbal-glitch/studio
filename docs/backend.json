@@ -173,7 +173,7 @@
           "description": "Timestamp of creation.",
           "format": "date-time"
         },
-        "updatedAt": {
+        "updatedAt":. {
           "type": "string",
           "description": "Timestamp of last update.",
           "format": "date-time"
@@ -195,10 +195,12 @@
   },
   "auth": {
     "providers": [
-      "anonymous"
+      "anonymous",
+      "password"
     ]
   },
   "firestore": {
+    "firestore.rules": "service cloud.firestore {\n  match /databases/{database}/documents {\n    // Anyone can read and write to the properties and tenants collections\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}",
     "/properties/{propertyId}": {
       "schema": {
         "$ref": "#/entities/Property"
