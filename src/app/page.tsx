@@ -290,14 +290,14 @@ export default function DashboardPage() {
         description: "This may take a moment. Please wait.",
     });
 
-    // TODO: When Firebase is connected, fetch all tenants from Firestore here.
-
     const updatedTenants = tenants.map(tenant => ({ ...tenant, status: 'paid' as 'paid' }));
     
+    // Using a for...of loop to ensure await works correctly inside the loop.
     for (const tenant of updatedTenants) {
-        // In a real implementation, you would generate the PDF,
+        // In a real implementation with Firebase, you would generate the PDF,
         // upload it to Firebase Storage, get the URL,
         // and then update the tenant record in Firestore.
+        // For now, we just generate the receipt in memory.
         await generateReceipt(tenant, false);
     }
 
