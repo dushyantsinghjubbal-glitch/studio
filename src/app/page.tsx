@@ -23,7 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { AppDataContext, Tenant } from '@/context/AppDataContext';
-
+import { PendingReceipt } from '@/components/receipts/PendingReceipt';
 
 const rentalReceiptSchema = z.object({
     tenantId: z.string().min(1, 'Please select a tenant'),
@@ -94,7 +94,7 @@ export default function DashboardPage() {
 
     setIsRentalReceiptFormOpen(false);
     rentalReceiptForm.reset();
-    await generateReceipt(updatedTenantData, true, data.paymentDate, data.amount);
+    await handleViewReceipt(updatedTenantData);
   };
 
 
@@ -148,7 +148,7 @@ export default function DashboardPage() {
           description: `Rent for ${recognizedTenant.name} for $${result.amount} has been confirmed and marked as paid.`,
         });
         
-        await generateReceipt(updatedTenantData, true);
+        await handleViewReceipt(updatedTenantData);
 
       } else {
          throw new Error(`Recognition failed. AI identified '${result.tenantName}', but expected '${selectedTenant.name}'.`);
@@ -181,7 +181,7 @@ export default function DashboardPage() {
     
     setIsUploadDialogOpen(false);
     handleFileSelect(null);
-    await generateReceipt(updatedTenantData, true);
+    await handleViewReceipt(updatedTenantData);
   };
 
   const openUploadDialog = (tenant: Tenant) => {
@@ -189,7 +189,7 @@ export default function DashboardPage() {
     setIsUploadDialogOpen(true);
   };
   
-  const generateReceipt = async (tenant: Tenant, openDialog: boolean = false, paymentDate?: Date, amount?: number) => {
+  const generatePaidReceipt = async (tenant: Tenant, paymentDate?: Date, amount?: number) => {
     const receiptAmount = amount ?? tenant.rentAmount;
 
     const pdfDoc = await PDFDocument.create();
@@ -264,22 +264,67 @@ export default function DashboardPage() {
 
     const pdfBytes = await pdfDoc.save();
     const pdfDataUri = `data:application/pdf;base64,${Buffer.from(pdfBytes).toString('base64')}`;
-    setGeneratedReceipt(pdfDataUri);
-    if (openDialog) {
-        setSelectedTenant(tenant);
-        setIsReceiptDialogOpen(true);
-    }
     return pdfDataUri;
   };
 
-  const handleShare = async (tenant: Tenant) => {
-    const receiptUri = await generateReceipt(tenant, false);
-    if (!receiptUri) return;
+  const handleViewReceipt = async (tenant: Tenant) => {
+    setSelectedTenant(tenant);
+    
+    const { status } = getPaymentStatus(tenant);
+    if (status === 'paid') {
+        const receiptUri = await generatePaidReceipt(tenant);
+        setGeneratedReceipt(receiptUri);
+    } else {
+        // For pending/overdue, we don't generate a PDF URI, 
+        // we'll render the component directly in the dialog
+        setGeneratedReceipt(null); 
+    }
+    
+    setIsReceiptDialogOpen(true);
+  };
 
-    if (navigator.share) {
+
+  const handleShare = async (tenant: Tenant) => {
+    const { status } = getPaymentStatus(tenant);
+    
+    let receiptUri;
+    let blob;
+
+    if (status === 'paid') {
+        receiptUri = await generatePaidReceipt(tenant);
+        if (!receiptUri) return;
+        const response = await fetch(receiptUri);
+        blob = await response.blob();
+    } else {
+        // For pending, we need to generate the PDF on the client
+        const html2pdf = (await import('html2pdf.js')).default;
+        const element = document.createElement('div');
+        const root = (await import('react-dom/client')).createRoot(element);
+        const property = properties.find(p => p.id === tenant.id) || properties.find(p => p.name === tenant.propertyName);
+        document.body.appendChild(element);
+        
+        // Temporarily render to generate PDF
+        await new Promise<void>(resolve => {
+            root.render(<PendingReceipt tenant={tenant} property={property} onRendered={() => resolve()} />);
+        });
+        
+        const opt = {
+          margin: 0.5,
+          filename: `${tenant.name}-receipt.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'in', format: 'a5', orientation: 'portrait' }
+        };
+
+        blob = await html2pdf().set(opt).from(element.querySelector('#receipt')).output('blob');
+        
+        root.unmount();
+        document.body.removeChild(element);
+    }
+
+
+    if (navigator.share && blob) {
         try {
-            const response = await fetch(receiptUri);
-            const blob = await response.blob();
             const file = new File([blob], `${tenant.name}-receipt.pdf`, { type: 'application/pdf' });
 
             await navigator.share({
@@ -391,7 +436,7 @@ export default function DashboardPage() {
                                                     <span>Upload Payment</span>
                                                 </DropdownMenuItem>
                                             )}
-                                            <DropdownMenuItem onClick={() => generateReceipt(tenant, true)}>
+                                            <DropdownMenuItem onClick={() => handleViewReceipt(tenant)}>
                                                 <FileText className="mr-2 h-4 w-4" />
                                                 <span>View Receipt</span>
                                             </DropdownMenuItem>
@@ -460,16 +505,24 @@ export default function DashboardPage() {
                         Here is the generated rent receipt. You can download or share it.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="h-[600px] w-full overflow-hidden rounded-md border">
-                    {generatedReceipt && <iframe src={generatedReceipt} className="h-full w-full" title="Receipt" />}
+                <div className="h-[70vh] w-full overflow-y-auto rounded-md border">
+                    {selectedTenant && getPaymentStatus(selectedTenant).status !== 'paid' ? (
+                        <PendingReceipt tenant={selectedTenant} property={properties.find(p => p.id === selectedTenant.id) || properties.find(p => p.name === selectedTenant.propertyName)} />
+                    ) : generatedReceipt ? (
+                        <iframe src={generatedReceipt} className="h-full w-full" title="Receipt" />
+                    ) : (
+                        <div className="flex items-center justify-center h-full"><p>Generating receipt...</p></div>
+                    )}
                 </div>
                  <DialogFooter className="flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end sm:gap-2">
                     <DialogClose asChild>
                         <Button variant="outline">Close</Button>
                     </DialogClose>
-                    <Button asChild>
-                        <a href={generatedReceipt ?? '#'} download={`${selectedTenant?.name}-receipt.pdf`}>Download</a>
-                    </Button>
+                    {selectedTenant && getPaymentStatus(selectedTenant).status === 'paid' && generatedReceipt &&
+                        <Button asChild>
+                            <a href={generatedReceipt ?? '#'} download={`${selectedTenant?.name}-receipt.pdf`}>Download</a>
+                        </Button>
+                    }
                     {selectedTenant && <Button onClick={() => handleShare(selectedTenant)}>
                         <Share2 className="mr-2 h-4 w-4" /> Share
                     </Button>}
