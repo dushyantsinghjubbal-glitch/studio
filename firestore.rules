@@ -1,38 +1,67 @@
 /**
- * @fileoverview Firestore Security Rules for the PDF Document Generator application.
+ * @fileoverview Firestore Security Rules for Prototyping.
  *
  * Core Philosophy:
- * This ruleset provides public read access to all PDF documents but restricts write access entirely. This reflects the application's intent to allow anyone to view generated PDFs while preventing unauthorized modification or creation of documents. Since the documents are intended to be publicly accessible, rate limiting and abuse prevention should be implemented in the application logic, not within these security rules.
+ * This ruleset prioritizes rapid prototyping by focusing on authorization and skipping data validation.
+ * All data is accessible to all authenticated users.
  *
  * Data Structure:
- * All PDF documents are stored under the top-level `/pdf_documents/{pdfDocumentId}` collection.
+ * The database consists of two top-level collections: "properties" and "tenants".
  *
  * Key Security Decisions:
- * - Public read access is granted to allow anyone to view generated PDF documents.
- * - All write access (create, update, delete) is denied to prevent unauthorized modification.
- *
- * Denormalization for Authorization:
- *  Not applicable in this simple scenario, as authorization is not based on user identity or document ownership.
- *
- * Structural Segregation:
- *  The application utilizes a single top-level collection (`/pdf_documents`) for all PDF documents, assuming they share the same security posture (publicly readable).
+ * - Anonymous authentication is enabled, so unauthenticated access is not possible.
+ * - Data validation is not performed beyond ownership checks to accelerate development.
+ * - No user listing is allowed.
+ * - All authenticated users can read all documents in the "properties" collection. Only authenticated users can modify.
+ * - All authenticated users can read all documents in the "tenants" collection. Only authenticated users can modify.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows public read access to PDF documents but restricts all write operations.
-     * @path /pdf_documents/{pdfDocumentId}
-     * @allow (get, list) Any user can read any PDF document.
-     * @deny (create, update, delete) No user can create, update, or delete any PDF document.
-     * @principle Public read access for generated PDFs, no write access allowed.
+     * @description Allows any authenticated user to read properties, but only authenticated users can create, update, and delete them.
+     * @path /properties/{propertyId}
+     * @allow (list) - Any authenticated user can list properties.
+     * @allow (get) - Any authenticated user can get a property.
+     * @allow (create) - Any authenticated user can create a property.
+     * @allow (update) - Any authenticated user can update a property.
+     * @allow (delete) - Any authenticated user can delete a property.
+     * @deny (create) - if request.auth == null
+     * @deny (update) - if request.auth == null
+     * @deny (delete) - if request.auth == null
+     * @principle Allows public read access with authenticated-user-only writes.
      */
-    match /pdf_documents/{pdfDocumentId} {
-      allow get, list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+    match /properties/{propertyId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource.size() > 0;
+      allow delete: if isSignedIn() && resource.size() > 0;
+    }
+
+    /**
+     * @description Allows any authenticated user to read tenants, but only authenticated users can create, update, and delete them.
+     * @path /tenants/{tenantId}
+     * @allow (list) - Any authenticated user can list tenants.
+     * @allow (get) - Any authenticated user can get a tenant.
+     * @allow (create) - Any authenticated user can create a tenant.
+     * @allow (update) - Any authenticated user can update a tenant.
+     * @allow (delete) - Any authenticated user can delete a tenant.
+     * @deny (create) - if request.auth == null
+     * @deny (update) - if request.auth == null
+     * @deny (delete) - if request.auth == null
+     * @principle Allows public read access with authenticated-user-only writes.
+     */
+    match /tenants/{tenantId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource.size() > 0;
+      allow delete: if isSignedIn() && resource.size() > 0;
+    }
+
+    // Helper function to determine if a user is signed in
+    function isSignedIn() {
+      return request.auth != null;
     }
   }
 }
