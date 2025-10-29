@@ -1,3 +1,5 @@
+'use client';
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
@@ -10,11 +12,6 @@ import { FirebaseClientProvider, useUser, useAuth } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { signOut } from 'firebase/auth';
-
-export const metadata: Metadata = {
-  title: 'Rent Manager',
-  description: 'A simple app to manage rental properties and payments.',
-};
 
 function UserMenu() {
     const { user } = useUser();
@@ -29,7 +26,9 @@ function UserMenu() {
     }
     
     const handleSignOut = async () => {
-        await signOut(auth);
+        if (auth) {
+            await signOut(auth);
+        }
     };
 
     return (
@@ -60,6 +59,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <title>Rent Manager</title>
+        <meta name="description" content="A simple app to manage rental properties and payments." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
