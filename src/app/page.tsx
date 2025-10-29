@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { DollarSign, Users, Clock, MoreVertical, Upload, CheckCircle2, XCircle, Home as HomeIcon, FileText, Share2, PlusCircle, Trash2, Edit, Building, Store } from 'lucide-react';
+import { DollarSign, Users, Clock, MoreVertical, Upload, CheckCircle2, XCircle, Home as HomeIcon, FileText, Share2, PlusCircle, Trash2, Edit, Building, Store, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -20,12 +20,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 
 const tenantSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     rent: z.coerce.number().min(1, 'Rent must be a positive number'),
-    dueDate: z.string().min(1, 'Due date is required'),
+    dueDate: z.date({ required_error: "Due date is required."}),
     whatsappNumber: z.string().optional(),
     propertyId: z.string().min(1, 'Please select a property'),
 });
@@ -50,7 +54,7 @@ type Tenant = {
   avatar: string;
   rent: number;
   status: 'paid' | 'pending';
-  dueDate: string;
+  dueDate: Date;
   whatsappNumber?: string;
   propertyId: string;
 };
@@ -63,10 +67,10 @@ const initialProperties: Property[] = [
 ];
 
 const initialTenants: Tenant[] = [
-  { id: '1', name: 'John Doe', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d', rent: 1200, status: 'paid', dueDate: '1st May 2024', whatsappNumber: '1234567890', propertyId: '1' },
-  { id: '2', name: 'Jane Smith', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', rent: 950, status: 'pending', dueDate: '5th May 2024', whatsappNumber: '0987654321', propertyId: '2' },
-  { id: '3', name: 'Sam Wilson', avatar: 'https://i.pravatar.cc/150?u=a04258114e29026702d', rent: 1500, status: 'paid', dueDate: '3rd May 2024', propertyId: '3' },
-  { id: '4', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', rent: 1100, status: 'pending', dueDate: '10th May 2024', whatsappNumber: '1122334455', propertyId: '4' },
+  { id: '1', name: 'John Doe', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d', rent: 1200, status: 'paid', dueDate: new Date('2024-05-01'), whatsappNumber: '1234567890', propertyId: '1' },
+  { id: '2', name: 'Jane Smith', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', rent: 950, status: 'pending', dueDate: new Date('2024-05-05'), whatsappNumber: '0987654321', propertyId: '2' },
+  { id: '3', name: 'Sam Wilson', avatar: 'https://i.pravatar.cc/150?u=a04258114e29026702d', rent: 1500, status: 'paid', dueDate: new Date('2024-05-03'), propertyId: '3' },
+  { id: '4', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', rent: 1100, status: 'pending', dueDate: new Date('2024-05-10'), whatsappNumber: '1122334455', propertyId: '4' },
 ];
 
 export default function RentManagementPage() {
@@ -188,7 +192,7 @@ export default function RentManagementPage() {
         tenantForm.reset({
             name: '',
             rent: 0,
-            dueDate: '',
+            dueDate: undefined,
             whatsappNumber: '',
             propertyId: '',
         });
@@ -461,7 +465,7 @@ export default function RentManagementPage() {
                                                             <span>{property.name}</span>
                                                         </div>
                                                     )}
-                                                    <p className="text-sm text-muted-foreground">Due on: {tenant.dueDate}</p>
+                                                    <p className="text-sm text-muted-foreground">Due on: {format(tenant.dueDate, 'PPP')}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-4">
@@ -624,8 +628,35 @@ export default function RentManagementPage() {
                             {tenantForm.formState.errors.rent && <p className="text-red-500 text-xs">{tenantForm.formState.errors.rent.message}</p>}
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="dueDate">Due Date</Label>
-                            <Input id="dueDate" {...tenantForm.register('dueDate')} placeholder="e.g., 1st June 2024" />
+                           <Label htmlFor="dueDate">Due Date</Label>
+                            <Controller
+                                control={tenantForm.control}
+                                name="dueDate"
+                                render={({ field }) => (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "w-full justify-start text-left font-normal",
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={field.onChange}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                )}
+                            />
                             {tenantForm.formState.errors.dueDate && <p className="text-red-500 text-xs">{tenantForm.formState.errors.dueDate.message}</p>}
                         </div>
                     </div>
