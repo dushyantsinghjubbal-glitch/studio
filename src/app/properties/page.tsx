@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { PlusCircle, Trash2, Edit, Building, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from 'next/link';
+import { AppDataContext, Property } from '@/context/AppDataContext';
 
 const propertySchema = z.object({
     name: z.string().min(1, 'Property name is required'),
@@ -22,28 +23,8 @@ const propertySchema = z.object({
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
 
-type Property = {
-  id: string;
-  name: string;
-  type: 'apartment' | 'shop';
-};
-
-const initialProperties: Property[] = [
-    { id: '1', name: 'Apt 101, Sunrise Building', type: 'apartment' },
-    { id: '2', name: 'Groceries R Us', type: 'shop' },
-    { id: '3', name: 'Apt 202, Sunrise Building', type: 'apartment' },
-    { id: '4', name: 'The Corner Bookstore', type: 'shop' },
-];
-
-const initialTenants = [
-  { id: '1', propertyId: '1' },
-  { id: '2', propertyId: '2' },
-  { id: '3', propertyId: '3' },
-  { id: '4', propertyId: '4' },
-];
-
 export default function PropertiesPage() {
-  const [properties, setProperties] = useState<Property[]>(initialProperties);
+  const { properties, setProperties, tenants } = useContext(AppDataContext);
   const [isPropertyFormOpen, setIsPropertyFormOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const { toast } = useToast();
@@ -87,7 +68,7 @@ export default function PropertiesPage() {
   };
   
   const handleRemoveProperty = (propertyId: string) => {
-    if (initialTenants.some(t => t.propertyId === propertyId)) {
+    if (tenants.some(t => t.propertyId === propertyId)) {
         toast({ variant: 'destructive', title: 'Cannot Remove Property', description: 'This property is currently assigned to a tenant.' });
         return;
     }

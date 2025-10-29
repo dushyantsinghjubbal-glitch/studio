@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusCircle, Trash2, Edit, Building, Store, Calendar as CalendarIcon } from 'lucide-react';
+import { useState, useContext } from 'react';
+import { PlusCircle, Trash2, Edit, Building, Store, Calendar as CalendarIcon, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -19,7 +19,8 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreVertical } from 'lucide-react';
+import { AppDataContext, Tenant } from '@/context/AppDataContext';
+
 
 const tenantSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -31,40 +32,8 @@ const tenantSchema = z.object({
 
 type TenantFormValues = z.infer<typeof tenantSchema>;
 
-type Property = {
-  id: string;
-  name: string;
-  type: 'apartment' | 'shop';
-};
-
-type Tenant = {
-  id: string;
-  name: string;
-  avatar: string;
-  rent: number;
-  status: 'paid' | 'pending';
-  dueDate: Date;
-  whatsappNumber?: string;
-  propertyId: string;
-};
-
-const initialProperties: Property[] = [
-    { id: '1', name: 'Apt 101, Sunrise Building', type: 'apartment' },
-    { id: '2', name: 'Groceries R Us', type: 'shop' },
-    { id: '3', name: 'Apt 202, Sunrise Building', type: 'apartment' },
-    { id: '4', name: 'The Corner Bookstore', type: 'shop' },
-];
-
-const initialTenants: Tenant[] = [
-  { id: '1', name: 'John Doe', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d', rent: 1200, status: 'paid', dueDate: new Date('2024-05-01'), whatsappNumber: '1234567890', propertyId: '1' },
-  { id: '2', name: 'Jane Smith', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', rent: 950, status: 'pending', dueDate: new Date('2024-05-05'), whatsappNumber: '0987654321', propertyId: '2' },
-  { id: '3', name: 'Sam Wilson', avatar: 'https://i.pravatar.cc/150?u=a04258114e29026702d', rent: 1500, status: 'paid', dueDate: new Date('2024-05-03'), propertyId: '3' },
-  { id: '4', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', rent: 1100, status: 'pending', dueDate: new Date('2024-05-10'), whatsappNumber: '1122334455', propertyId: '4' },
-];
-
 export default function TenantsPage() {
-  const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
-  const [properties] = useState<Property[]>(initialProperties);
+  const { tenants, setTenants, properties } = useContext(AppDataContext);
   const [isTenantFormOpen, setIsTenantFormOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const { toast } = useToast();
@@ -81,7 +50,7 @@ export default function TenantsPage() {
         tenantForm.reset({
             name: tenant.name,
             rent: tenant.rent,
-            dueDate: tenant.dueDate,
+            dueDate: new Date(tenant.dueDate),
             whatsappNumber: tenant.whatsappNumber || '',
             propertyId: tenant.propertyId,
         });
@@ -99,7 +68,8 @@ export default function TenantsPage() {
 
   const handleTenantFormSubmit = (data: TenantFormValues) => {
     if (editingTenant) {
-        setTenants(tenants.map(t => t.id === editingTenant.id ? { ...editingTenant, ...data } : t));
+        const updatedTenant = { ...editingTenant, ...data };
+        setTenants(tenants.map(t => t.id === editingTenant.id ? updatedTenant : t));
         toast({ title: "Tenant Updated", description: `${data.name}'s details have been updated.` });
     } else {
         const newTenant: Tenant = {
@@ -152,7 +122,7 @@ export default function TenantsPage() {
                                                 <span>{property.name}</span>
                                             </div>
                                         )}
-                                        <p className="text-sm text-muted-foreground">Rent: ${tenant.rent} | Due on: {format(tenant.dueDate, 'PPP')}</p>
+                                        <p className="text-sm text-muted-foreground">Rent: ${tenant.rent} | Due on: {format(new Date(tenant.dueDate), 'PPP')}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">

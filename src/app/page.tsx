@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { MoreVertical, Upload, CheckCircle2, XCircle, FileText, Share2, Building, Store, DollarSign, Users, Clock, PlusCircle, Calendar as CalendarIcon, FileArchive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { AppDataContext, Tenant } from '@/context/AppDataContext';
 
 
 const rentalReceiptSchema = z.object({
@@ -32,40 +33,8 @@ const rentalReceiptSchema = z.object({
 
 type RentalReceiptFormValues = z.infer<typeof rentalReceiptSchema>;
 
-type Property = {
-  id: string;
-  name: string;
-  type: 'apartment' | 'shop';
-};
-
-type Tenant = {
-  id: string;
-  name: string;
-  avatar: string;
-  rent: number;
-  status: 'paid' | 'pending';
-  dueDate: Date;
-  whatsappNumber?: string;
-  propertyId: string;
-};
-
-const initialProperties: Property[] = [
-    { id: '1', name: 'Apt 101, Sunrise Building', type: 'apartment' },
-    { id: '2', name: 'Groceries R Us', type: 'shop' },
-    { id: '3', name: 'Apt 202, Sunrise Building', type: 'apartment' },
-    { id: '4', name: 'The Corner Bookstore', type: 'shop' },
-];
-
-const initialTenants: Tenant[] = [
-  { id: '1', name: 'John Doe', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d', rent: 1200, status: 'paid', dueDate: new Date('2024-05-01'), whatsappNumber: '1234567890', propertyId: '1' },
-  { id: '2', name: 'Jane Smith', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', rent: 950, status: 'pending', dueDate: new Date('2024-05-05'), whatsappNumber: '0987654321', propertyId: '2' },
-  { id: '3', name: 'Sam Wilson', avatar: 'https://i.pravatar.cc/150?u=a04258114e29026702d', rent: 1500, status: 'paid', dueDate: new Date('2024-05-03'), propertyId: '3' },
-  { id: '4', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', rent: 1100, status: 'pending', dueDate: new Date('2024-05-10'), whatsappNumber: '1122334455', propertyId: '4' },
-];
-
 export default function DashboardPage() {
-  const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
-  const [properties] = useState<Property[]>(initialProperties);
+  const { tenants, setTenants, properties } = useContext(AppDataContext);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
@@ -294,10 +263,6 @@ export default function DashboardPage() {
     
     // Using a for...of loop to ensure await works correctly inside the loop.
     for (const tenant of updatedTenants) {
-        // In a real implementation with Firebase, you would generate the PDF,
-        // upload it to Firebase Storage, get the URL,
-        // and then update the tenant record in Firestore.
-        // For now, we just generate the receipt in memory.
         await generateReceipt(tenant, false);
     }
 
