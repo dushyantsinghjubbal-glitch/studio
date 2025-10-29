@@ -32,6 +32,7 @@ const tenantSchema = z.object({
     propertyName: z.string().min(1, 'Property name is required'),
     propertyAddress: z.string().min(1, 'Property address is required'),
     depositAmount: z.coerce.number().optional(),
+    netTerms: z.coerce.number().optional(),
     paymentMethod: z.enum(['cash', 'bank', 'upi', 'other']),
     notes: z.string().optional(),
 });
@@ -48,6 +49,7 @@ export default function TenantsPage() {
     resolver: zodResolver(tenantSchema),
     defaultValues: {
         paymentMethod: 'bank',
+        netTerms: 0,
     }
   });
 
@@ -83,6 +85,7 @@ export default function TenantsPage() {
             propertyName: tenant.propertyName,
             propertyAddress: tenant.propertyAddress,
             depositAmount: tenant.depositAmount || 0,
+            netTerms: tenant.netTerms || 0,
             paymentMethod: tenant.paymentMethod,
             notes: tenant.notes || '',
         });
@@ -96,6 +99,7 @@ export default function TenantsPage() {
             propertyName: '',
             propertyAddress: '',
             depositAmount: 0,
+            netTerms: 0,
             paymentMethod: 'bank',
             notes: '',
             propertyId: '',
@@ -300,27 +304,51 @@ export default function TenantsPage() {
                             <Input id="depositAmount" type="number" {...tenantForm.register('depositAmount')} />
                         </div>
                     </div>
-                    <div className="grid gap-2">
-                        <Label>Payment Method</Label>
-                        <Controller
-                            control={tenantForm.control}
-                            name="paymentMethod"
-                            render={({ field }) => (
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a payment method" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="cash">Cash</SelectItem>
-                                        <SelectItem value="bank">Bank Transfer</SelectItem>
-                                        <SelectItem value="upi">UPI</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                         {tenantForm.formState.errors.paymentMethod && <p className="text-red-500 text-xs">{tenantForm.formState.errors.paymentMethod.message}</p>}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label>Payment Method</Label>
+                            <Controller
+                                control={tenantForm.control}
+                                name="paymentMethod"
+                                render={({ field }) => (
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a payment method" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="cash">Cash</SelectItem>
+                                            <SelectItem value="bank">Bank Transfer</SelectItem>
+                                            <SelectItem value="upi">UPI</SelectItem>
+                                            <SelectItem value="other">Other</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                             {tenantForm.formState.errors.paymentMethod && <p className="text-red-500 text-xs">{tenantForm.formState.errors.paymentMethod.message}</p>}
+                        </div>
+                         <div className="grid gap-2">
+                            <Label>Net Terms (Grace Period)</Label>
+                            <Controller
+                                control={tenantForm.control}
+                                name="netTerms"
+                                render={({ field }) => (
+                                    <Select onValueChange={(val) => field.onChange(parseInt(val, 10))} defaultValue={String(field.value)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select grace period" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="0">None</SelectItem>
+                                            {[...Array(11)].map((_, i) => (
+                                                <SelectItem key={i+5} value={String(i + 5)}>Net {i + 5}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                        </div>
                     </div>
+
 
                      <div className="grid gap-2">
                         <Label htmlFor="notes">Notes</Label>

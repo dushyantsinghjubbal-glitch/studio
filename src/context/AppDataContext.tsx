@@ -36,9 +36,10 @@ export type Tenant = {
     rentAmount: number;
     depositAmount?: number;
     dueDate: Date;
+    netTerms?: number;
     paymentMethod: 'cash' | 'bank' | 'upi' | 'other';
     lastPaymentMonth?: string;
-    paymentStatus: 'due' | 'paid' | 'partial';
+    paymentStatus: 'due' | 'paid' | 'partial' | 'overdue';
     lastReceiptUrl?: string;
     lastPaymentDate?: string;
     notes?: string;
@@ -57,12 +58,9 @@ const propertyConverter = {
         };
 
         // Convert undefined dates to null
-        if (data.rentDueDate === undefined) {
-            data.rentDueDate = null;
-        }
-        if (data.availabilityDate === undefined) {
-            data.availabilityDate = null;
-        }
+        data.rentDueDate = data.rentDueDate || null;
+        data.availabilityDate = data.availabilityDate || null;
+
 
         return data;
     },
@@ -84,6 +82,7 @@ const tenantConverter = {
         return {
             ...tenant,
             dueDate: tenant.dueDate,
+            netTerms: tenant.netTerms || 0,
             createdAt: tenant.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };

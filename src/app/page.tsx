@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { recognizeTenantPayment, type RecognizeTenantPaymentInput } from '@/ai/flows/recognize-tenant-payment';
 import Image from 'next/image';
-import { format } from 'date-fns';
+import { format, addDays, isBefore } from 'date-fns';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -45,8 +45,29 @@ export default function DashboardPage() {
   const [isRentalReceiptFormOpen, setIsRentalReceiptFormOpen] = useState(false);
   const { toast } = useToast();
 
+  const getPaymentStatus = (tenant: Tenant): { status: 'paid' | 'due' | 'overdue' | 'partial', badge: 'default' | 'destructive' | 'secondary' | 'warning', badgeClass: string } => {
+    if (tenant.paymentStatus === 'paid') {
+      return { status: 'paid', badge: 'default', badgeClass: 'bg-green-500/80 hover:bg-green-500/90' };
+    }
+    if (tenant.paymentStatus === 'partial') {
+      return { status: 'partial', badge: 'secondary', badgeClass: 'bg-yellow-500/80 hover:bg-yellow-500/90' };
+    }
+    
+    const today = new Date();
+    const dueDate = new Date(tenant.dueDate);
+    const gracePeriod = tenant.netTerms || 0;
+    const finalDueDate = addDays(dueDate, gracePeriod);
+
+    if (isBefore(today, finalDueDate)) {
+      return { status: 'due', badge: 'destructive', badgeClass: '' };
+    } else {
+      return { status: 'overdue', badge: 'destructive', badgeClass: 'bg-red-600 hover:bg-red-700' };
+    }
+  };
+
+
   const totalIncome = tenants.filter(t => t.paymentStatus === 'paid').reduce((acc, t) => acc + t.rentAmount, 0);
-  const pendingRent = tenants.filter(t => t.paymentStatus === 'pending').reduce((acc, t) => acc + t.rentAmount, 0);
+  const pendingRent = tenants.filter(t => t.paymentStatus !== 'paid').reduce((acc, t) => acc + t.rentAmount, 0);
 
   const rentalReceiptForm = useForm<RentalReceiptFormValues>({
     resolver: zodResolver(rentalReceiptSchema),
@@ -63,7 +84,7 @@ export default function DashboardPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'Tenant not found.' });
         return;
     }
-    const updatedTenantData = { ...tenant, paymentStatus: 'paid' as 'paid' | 'pending' | 'partial', rentAmount: data.amount, lastPaymentDate: data.paymentDate.toISOString() };
+    const updatedTenantData = { ...tenant, paymentStatus: 'paid' as 'paid' | 'due' | 'partial' | 'overdue', rentAmount: data.amount, lastPaymentDate: data.paymentDate.toISOString() };
     await updateTenant(updatedTenantData);
     
     toast({
@@ -119,7 +140,7 @@ export default function DashboardPage() {
       const recognizedTenant = tenants.find(t => t.name.toLowerCase() === result.tenantName.toLowerCase());
 
       if (recognizedTenant && recognizedTenant.id === selectedTenant.id) {
-         const updatedTenantData = { ...recognizedTenant, paymentStatus: 'paid' as 'paid' | 'pending' | 'partial', lastPaymentDate: new Date().toISOString() };
+         const updatedTenantData = { ...recognizedTenant, paymentStatus: 'paid' as 'paid' | 'due' | 'partial' | 'overdue', lastPaymentDate: new Date().toISOString() };
          await updateTenant(updatedTenantData);
         
         toast({
@@ -149,7 +170,7 @@ export default function DashboardPage() {
   
   const handleManualPayment = async () => {
     if (!selectedTenant) return;
-    const updatedTenantData = { ...selectedTenant, paymentStatus: 'paid' as 'paid' | 'pending' | 'partial', lastPaymentDate: new Date().toISOString() };
+    const updatedTenantData = { ...selectedTenant, paymentStatus: 'paid' as 'paid' | 'due' | 'partial' | 'overdue', lastPaymentDate: new Date().toISOString() };
 
     await updateTenant(updatedTenantData);
 
@@ -235,8 +256,9 @@ export default function DashboardPage() {
       page.drawText('Thank you for your payment!', { x: 50, y: 80, font, size: 14, color: grayColor });
     }
 
-    const statusText = `Status: ${tenant.paymentStatus.toUpperCase()}`;
-    const statusColor = tenant.paymentStatus === 'paid' ? rgb(0, 0.5, 0) : rgb(0.8, 0, 0);
+    const { status: paymentStatusText } = getPaymentStatus(tenant);
+    const statusText = `Status: ${paymentStatusText.toUpperCase()}`;
+    const statusColor = paymentStatusText === 'paid' ? rgb(0, 0.5, 0) : rgb(0.8, 0, 0);
     page.drawText(statusText, { x: 50, y: 60, font: boldFont, size: 12, color: statusColor });
 
 
@@ -331,6 +353,7 @@ export default function DashboardPage() {
                {loading ? (<p>Loading payments...</p>) : (
                 <div className="divide-y divide-border">
                     {tenants.map((tenant) => {
+                        const { status, badge, badgeClass } = getPaymentStatus(tenant);
                         return (
                             <div key={tenant.id} className="flex items-center justify-between py-3">
                                 <div className="flex items-center gap-4">
@@ -350,9 +373,9 @@ export default function DashboardPage() {
                                 <div className="flex items-center gap-4">
                                     <div className="text-right">
                                        <p className="font-semibold text-lg">${tenant.rentAmount.toLocaleString()}</p>
-                                        <Badge variant={tenant.paymentStatus === 'paid' ? 'default' : tenant.paymentStatus === 'pending' ? 'destructive' : 'secondary'} className={tenant.paymentStatus === 'paid' ? 'bg-green-500/80 hover:bg-green-500/90' : ''}>
-                                            {tenant.paymentStatus === 'paid' ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
-                                            {tenant.paymentStatus.charAt(0).toUpperCase() + tenant.paymentStatus.slice(1)}
+                                        <Badge variant={badge} className={badgeClass}>
+                                            {status === 'paid' ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
+                                            {status.charAt(0).toUpperCase() + status.slice(1)}
                                         </Badge>
                                     </div>
                                     <DropdownMenu>
@@ -362,7 +385,7 @@ export default function DashboardPage() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            {tenant.paymentStatus !== 'paid' && (
+                                            {status !== 'paid' && (
                                                 <DropdownMenuItem onClick={() => openUploadDialog(tenant)}>
                                                     <Upload className="mr-2 h-4 w-4" />
                                                     <span>Upload Payment</span>

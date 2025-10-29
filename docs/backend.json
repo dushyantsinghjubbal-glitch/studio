@@ -73,7 +73,7 @@
         },
         "notes": {
           "type": "string",
-          "description": "Extra remarks (e.g., 'needs repaint before next tenant')."
+description": "Extra remarks (e.g., 'needs repaint before next tenant')."
         },
         "createdAt": {
           "type": "string",
@@ -132,6 +132,10 @@
           "description": "Rent due day each month.",
           "format": "date"
         },
+        "netTerms": {
+          "type": "number",
+          "description": "Payment grace period in days (e.g., 5 for Net 5)."
+        },
         "paymentMethod": {
           "type": "string",
           "description": "Cash, Bank, UPI, etc.",
@@ -152,7 +156,8 @@
           "enum": [
             "due",
             "paid",
-            "partial"
+            "partial",
+            "overdue"
           ]
         },
         "lastReceiptUrl": {
@@ -173,7 +178,7 @@
           "description": "Timestamp of creation.",
           "format": "date-time"
         },
-        "updatedAt":. {
+        "updatedAt": {
           "type": "string",
           "description": "Timestamp of last update.",
           "format": "date-time"
@@ -200,7 +205,7 @@
     ]
   },
   "firestore": {
-    "firestore.rules": "service cloud.firestore {\n  match /databases/{database}/documents {\n    // Anyone can read and write to the properties and tenants collections\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}",
+    "firestore.rules": "service cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}",
     "/properties/{propertyId}": {
       "schema": {
         "$ref": "#/entities/Property"
