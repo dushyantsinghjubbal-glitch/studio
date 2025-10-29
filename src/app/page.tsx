@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useContext } from 'react';
-import { MoreVertical, Upload, CheckCircle2, XCircle, FileText, Share2, Building, Store, DollarSign, Users, Clock, PlusCircle, Calendar as CalendarIcon, FileArchive } from 'lucide-react';
+import { MoreVertical, Upload, CheckCircle2, XCircle, FileText, Share2, Building, Store, DollarSign, Users, Clock, PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -250,26 +250,6 @@ export default function DashboardPage() {
     return pdfDataUri;
   };
 
-  const handleGenerateAllReceipts = async () => {
-    toast({
-        title: "Generating All Receipts...",
-        description: "This may take a moment. Please wait.",
-    });
-
-    for (const tenant of tenants) {
-      if (tenant.paymentStatus === 'pending') {
-        const updatedTenantData = { ...tenant, paymentStatus: 'paid' as 'paid' | 'pending' | 'partial', lastPaymentDate: new Date().toISOString() };
-        await updateTenant(updatedTenantData);
-        await generateReceipt(updatedTenantData, false);
-      }
-    }
-
-    toast({
-        title: "All Receipts Generated!",
-        description: "All pending tenants have been marked as paid and their receipts are ready.",
-    });
-  };
-  
   const handleShare = async (tenant: Tenant) => {
     const receiptUri = await generateReceipt(tenant, false);
     if (!receiptUri) return;
@@ -344,10 +324,6 @@ export default function DashboardPage() {
                     <Button onClick={() => setIsRentalReceiptFormOpen(true)}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Rental Receipt
-                    </Button>
-                     <Button variant="outline" onClick={handleGenerateAllReceipts}>
-                        <FileArchive className="mr-2 h-4 w-4" />
-                        Generate All Receipts
                     </Button>
                 </div>
             </CardHeader>
