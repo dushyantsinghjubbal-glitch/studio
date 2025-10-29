@@ -1,0 +1,38 @@
+/**
+ * @fileoverview Firestore Security Rules for the PDF Document Generator application.
+ *
+ * Core Philosophy:
+ * This ruleset provides public read access to all PDF documents but restricts write access entirely. This reflects the application's intent to allow anyone to view generated PDFs while preventing unauthorized modification or creation of documents. Since the documents are intended to be publicly accessible, rate limiting and abuse prevention should be implemented in the application logic, not within these security rules.
+ *
+ * Data Structure:
+ * All PDF documents are stored under the top-level `/pdf_documents/{pdfDocumentId}` collection.
+ *
+ * Key Security Decisions:
+ * - Public read access is granted to allow anyone to view generated PDF documents.
+ * - All write access (create, update, delete) is denied to prevent unauthorized modification.
+ *
+ * Denormalization for Authorization:
+ *  Not applicable in this simple scenario, as authorization is not based on user identity or document ownership.
+ *
+ * Structural Segregation:
+ *  The application utilizes a single top-level collection (`/pdf_documents`) for all PDF documents, assuming they share the same security posture (publicly readable).
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Allows public read access to PDF documents but restricts all write operations.
+     * @path /pdf_documents/{pdfDocumentId}
+     * @allow (get, list) Any user can read any PDF document.
+     * @deny (create, update, delete) No user can create, update, or delete any PDF document.
+     * @principle Public read access for generated PDFs, no write access allowed.
+     */
+    match /pdf_documents/{pdfDocumentId} {
+      allow get, list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
