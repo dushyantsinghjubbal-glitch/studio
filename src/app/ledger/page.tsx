@@ -2,7 +2,7 @@
 
 import { useState, useContext, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PlusCircle, Upload, Edit, Trash2, MoreVertical, Search, Filter, FileDown, ArrowDown, ArrowUp, Briefcase, Droplets, Wrench, HandCoins, ShoppingCart, CircleHelp } from 'lucide-react';
+import { PlusCircle, Upload, Edit, Trash2, MoreVertical, Search, Filter, FileDown, ArrowDown, ArrowUp, Briefcase, Droplets, Wrench, HandCoins, ShoppingCart, CircleHelp, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -34,12 +34,14 @@ const transactionSchema = z.object({
     date: z.date(),
     notes: z.string().optional(),
     receipt: z.instanceof(File).optional(),
+    propertyId: z.string().optional(),
+    tenantId: z.string().optional(),
 });
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
 
 const LedgerContent = () => {
-  const { transactions, addTransaction, loading } = useContext(AppDataContext);
+  const { transactions, properties, tenants, addTransaction, loading } = useContext(AppDataContext);
   const searchParams = useSearchParams();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
@@ -58,8 +60,11 @@ const LedgerContent = () => {
   });
 
   useEffect(() => {
-    if (searchParams.get('action') === 'add') {
+    const action = searchParams.get('action');
+    if (action === 'add') {
       setIsFormOpen(true);
+    } else if (action === 'scan') {
+      setIsAiOpen(true);
     }
   }, [searchParams]);
 
@@ -145,16 +150,6 @@ const LedgerContent = () => {
     <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 animate-in fade-in-50">
         <div className="flex items-center justify-between space-y-2">
             <h2 className="text-3xl font-bold tracking-tight">Financial Ledger</h2>
-            <div className="flex items-center space-x-2">
-                <Button onClick={() => setIsAiOpen(true)}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Scan Receipt
-                </Button>
-                <Button onClick={() => setIsFormOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Manually
-                </Button>
-            </div>
         </div>
 
          <div className="grid gap-4 md:grid-cols-3">
@@ -312,6 +307,27 @@ const LedgerContent = () => {
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus/></PopoverContent>
                                 </Popover>
+                            )} />
+                        </div>
+                    </div>
+                     <div className="grid gap-2">
+                        <Label>Related To (Optional)</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <Controller name="propertyId" control={form.control} render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger><SelectValue placeholder="Property..."/></SelectTrigger>
+                                    <SelectContent>
+                                        {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            )} />
+                             <Controller name="tenantId" control={form.control} render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger><SelectValue placeholder="Tenant..."/></SelectTrigger>
+                                    <SelectContent>
+                                        {tenants.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                             )} />
                         </div>
                     </div>

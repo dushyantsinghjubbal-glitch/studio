@@ -19,7 +19,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               Income
             </span>
             <span className="font-bold text-accent">
-              {payload[0].value.toLocaleString()}
+              ${payload[0].value.toLocaleString()}
             </span>
           </div>
           <div className="flex flex-col space-y-1">
@@ -27,7 +27,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               Expense
             </span>
             <span className="font-bold text-destructive">
-              {payload[1].value.toLocaleString()}
+              ${payload[1].value.toLocaleString()}
             </span>
           </div>
         </div>
@@ -63,16 +63,13 @@ export default function DashboardPage() {
   }, {} as Record<string, { month: string; income: number; expense: number }>);
 
   const chartData = Object.values(monthlyData);
+  const totalMonthlyIncome = chartData.reduce((acc, d) => acc + d.income, 0);
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 animate-in fade-in-50">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
           <div className="flex items-center space-x-2">
-            <Button onClick={() => router.push('/ledger?action=add')}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Expense
-            </Button>
             <Button variant="outline">
               <Bell className="mr-2 h-4 w-4" />
               Send Reminders
@@ -117,7 +114,7 @@ export default function DashboardPage() {
                     <BarChart2 className="h-5 w-5 text-accent" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-accent">+${chartData.reduce((acc, d) => acc + d.income, 0).toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-accent">+${totalMonthlyIncome.toLocaleString()}</div>
                     <p className="text-xs text-muted-foreground">Income this month</p>
                 </CardContent>
             </Card>

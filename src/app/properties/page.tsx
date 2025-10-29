@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useContext } from 'react';
-import { PlusCircle, Trash2, Edit, Building, Store, Trees, Briefcase, Calendar as CalendarIcon, MoreVertical, Search } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Building, Store, Trees, Briefcase, Calendar as CalendarIcon, MoreVertical, Search, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -20,7 +20,9 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AppDataContext, Property } from '@/context/AppDataContext';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { useRouter } from 'next/navigation';
+
 
 const propertySchema = z.object({
     name: z.string().min(1, 'Property name is required'),
@@ -48,6 +50,7 @@ export default function PropertiesPage() {
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const router = useRouter();
   
   const propertyForm = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema),
@@ -149,10 +152,6 @@ export default function PropertiesPage() {
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input type="search" placeholder="Search properties..." className="pl-8" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                     </div>
-                    <Button onClick={() => openPropertyForm(null)}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Property
-                    </Button>
                 </div>
             </CardHeader>
             <CardContent>
@@ -185,6 +184,11 @@ export default function PropertiesPage() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => router.push(`/properties/${property.id}`)}>
+                                                <BarChart2 className="mr-2 h-4 w-4" />
+                                                <span>View Details</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
                                             <DropdownMenuItem onClick={() => openPropertyForm(property)}>
                                                 <Edit className="mr-2 h-4 w-4" />
                                                 <span>Edit</span>

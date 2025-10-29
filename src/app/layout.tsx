@@ -4,13 +4,15 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarItem, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { Home, Users, Building, LogOut, Wallet, BotMessageSquare } from 'lucide-react';
+import { Home, Users, Building, LogOut, Wallet, BotMessageSquare, Plus, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppDataProvider } from '@/context/AppDataContext';
 import { FirebaseClientProvider, useUser, useAuth } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { signOut } from 'firebase/auth';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useRouter } from 'next/navigation';
 
 function UserMenu() {
     const { user } = useUser();
@@ -49,6 +51,33 @@ function UserMenu() {
         </DropdownMenu>
     );
 }
+
+function FloatingActionButton() {
+  const router = useRouter();
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg" size="icon">
+          <Plus className="h-8 w-8" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-2 mb-2" align="end">
+        <div className="grid gap-1">
+          <Button variant="ghost" className="justify-start" onClick={() => router.push('/ledger?action=add')}>
+            <Wallet className="mr-2 h-4 w-4" />
+            Add Transaction
+          </Button>
+          <Button variant="ghost" className="justify-start" onClick={() => router.push('/ledger?action=scan')}>
+            <Receipt className="mr-2 h-4 w-4" />
+            Scan Receipt
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 
 export default function RootLayout({
   children,
@@ -120,6 +149,7 @@ export default function RootLayout({
                           <SidebarTrigger className="md:hidden"/>
                       </header>
                       {children}
+                      <FloatingActionButton />
                   </SidebarInset>
               </SidebarProvider>
           </AppDataProvider>

@@ -134,10 +134,6 @@ export default function TenantsPage() {
                     <CardTitle>Tenants</CardTitle>
                     <CardDescription>Manage your tenants and their information.</CardDescription>
                 </div>
-                <Button onClick={() => openTenantForm(null)}>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Add Tenant
-                </Button>
             </CardHeader>
             <CardContent>
                 {loading ? (<p>Loading tenants...</p>) : tenants.length === 0 ? (
@@ -208,11 +204,17 @@ export default function TenantsPage() {
                                     </div>
                                 </CardContent>
                                 <CardFooter>
-                                     <Badge variant={tenant.paymentStatus === 'paid' ? 'default' : 'destructive'} className={cn(
-                                        tenant.paymentStatus === 'paid' && 'bg-accent text-accent-foreground',
-                                        tenant.paymentStatus === 'overdue' && 'bg-red-600 text-white'
-                                     )}>
-                                        {tenant.paymentStatus.charAt(0).toUpperCase() + tenant.paymentStatus.slice(1)}
+                                    <Badge 
+                                        className={cn(
+                                            'capitalize transition-all',
+                                            tenant.paymentStatus === 'paid' && 'bg-green-100 text-green-800 border-green-200',
+                                            tenant.paymentStatus === 'due' && 'bg-yellow-100 text-yellow-800 border-yellow-200 animate-pulse',
+                                            tenant.paymentStatus === 'overdue' && 'bg-red-100 text-red-800 border-red-200 animate-bounce',
+                                            tenant.paymentStatus === 'partial' && 'bg-orange-100 text-orange-800 border-orange-200'
+                                        )}
+                                        variant="outline"
+                                    >
+                                        {tenant.paymentStatus}
                                     </Badge>
                                 </CardFooter>
                             </Card>
