@@ -386,11 +386,11 @@ export default function DashboardPage() {
                         </div>
                     )}
                 </div>
-                 <DialogFooter className="sm:justify-between items-center pt-4 border-t">
+                 <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between items-center pt-4 border-t gap-2">
                     <Button variant="secondary" onClick={handleManualPayment}>
                        <CheckCircle2 className="mr-2 h-4 w-4" /> Mark as Paid Manually
                     </Button>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 self-end">
                         <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>Cancel</Button>
                         <Button onClick={handleFileUpload} disabled={!selectedFile || isProcessing}>
                             {isProcessing ? (
@@ -420,7 +420,7 @@ export default function DashboardPage() {
                 <div className="h-[600px] w-full overflow-hidden rounded-md border">
                     {generatedReceipt && <iframe src={generatedReceipt} className="h-full w-full" title="Receipt" />}
                 </div>
-                 <DialogFooter>
+                 <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end sm:gap-2 pt-4">
                     <DialogClose asChild>
                         <Button variant="outline">Close</Button>
                     </DialogClose>
