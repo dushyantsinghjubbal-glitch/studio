@@ -113,7 +113,7 @@ export default function DashboardPage() {
           description: `Rent for ${recognizedTenant.name} for $${result.amount} has been confirmed and marked as paid.`,
         });
         
-        await generateReceipt(recognizedTenant, true);
+        await generateReceipt({...recognizedTenant, status: 'paid'}, true);
 
       } else {
          throw new Error(`Recognition failed. AI identified '${result.tenantName}', but expected '${selectedTenant.name}'.`);
@@ -202,7 +202,10 @@ export default function DashboardPage() {
     page.drawText(`$${tenant.rent.toLocaleString()}`, { x: width - 150, y: totalY - 20, font: boldFont, size: 14, color: primaryColor });
 
     page.drawText('Thank you for your payment!', { x: 50, y: 80, font, size: 14, color: grayColor });
-    page.drawText('Status: PAID', { x: 50, y: 60, font: boldFont, size: 12, color: rgb(0, 0.5, 0) });
+
+    const statusText = `Status: ${tenant.status.toUpperCase()}`;
+    const statusColor = tenant.status === 'paid' ? rgb(0, 0.5, 0) : rgb(0.8, 0, 0);
+    page.drawText(statusText, { x: 50, y: 60, font: boldFont, size: 12, color: statusColor });
 
 
     const pdfBytes = await pdfDoc.save();
@@ -227,13 +230,13 @@ export default function DashboardPage() {
 
             await navigator.share({
                 title: `Rent Receipt for ${tenant.name}`,
-                text: `Hi ${tenant.name},\n\nThank you for your rent payment of $${tenant.rent}. Your receipt is attached.`,
+                text: `Hi ${tenant.name},\n\nHere is your rent receipt for $${tenant.rent}.`,
                 files: [file],
             });
         } catch (error) {
             console.error('Error sharing:', error);
             if (tenant.whatsappNumber) {
-                 const whatsappUrl = `https://wa.me/${tenant.whatsappNumber}?text=Hi%20${tenant.name},%20your%20rent%20of%20$${tenant.rent}%20has%20been%20received.%20You%20can%20download%20your%20receipt.`;
+                 const whatsappUrl = `https://wa.me/${tenant.whatsappNumber}?text=Hi%20${tenant.name},%20here%20is%20your%20rent%20receipt%20for%20$${tenant.rent}.%20You%20can%20download%20it.`;
                  window.open(whatsappUrl, '_blank');
             } else {
                  toast({
@@ -244,7 +247,7 @@ export default function DashboardPage() {
             }
         }
     } else if (tenant.whatsappNumber) {
-        const whatsappUrl = `https://wa.me/${tenant.whatsappNumber}?text=Hi%20${tenant.name},%20your%20rent%20of%20$${tenant.rent}%20has%20been%20received.%20You%20can%20download%20your%20receipt.`;
+        const whatsappUrl = `https://wa.me/${tenant.whatsappNumber}?text=Hi%20${tenant.name},%20here%20is%20your%20rent%20receipt%20for%20$${tenant.rent}.%20You%20can%20download%20it.`;
         window.open(whatsappUrl, '_blank');
     } else {
         toast({
@@ -338,18 +341,14 @@ export default function DashboardPage() {
                                                     <span>Upload Payment</span>
                                                 </DropdownMenuItem>
                                             )}
-                                            {tenant.status === 'paid' && (
-                                                <>
-                                                    <DropdownMenuItem onClick={() => generateReceipt(tenant, true)}>
-                                                        <FileText className="mr-2 h-4 w-4" />
-                                                        <span>View Receipt</span>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleShare(tenant)}>
-                                                        <Share2 className="mr-2 h-4 w-4" />
-                                                        <span>Share Receipt</span>
-                                                    </DropdownMenuItem>
-                                                </>
-                                            )}
+                                            <DropdownMenuItem onClick={() => generateReceipt(tenant, true)}>
+                                                <FileText className="mr-2 h-4 w-4" />
+                                                <span>View Receipt</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleShare(tenant)}>
+                                                <Share2 className="mr-2 h-4 w-4" />
+                                                <span>Share Receipt</span>
+                                            </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
