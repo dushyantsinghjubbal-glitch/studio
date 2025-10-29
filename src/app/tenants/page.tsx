@@ -289,7 +289,8 @@ export default function TenantsPage() {
                         <DialogClose asChild>
                             <Button type="button" variant="outline">Cancel</Button>
                         </DialogClose>
-                        <Button type="submit">{editingTenant ? 'Save Changes' : 'Add Tenant'}</Button>DialogFooter>
+                        <Button type="submit">{editingTenant ? 'Save Changes' : 'Add Tenant'}</Button>
+                    </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
