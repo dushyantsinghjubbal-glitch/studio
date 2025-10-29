@@ -1,14 +1,32 @@
 'use client';
 
-import React, { useEffect, useMemo, type ReactNode } from 'react';
-import { FirebaseProvider } from '@/firebase/provider';
+import React, { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { FirebaseProvider, useUser } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
 import { initiateAnonymousSignIn } from './non-blocking-login';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
 }
+
+// A component to handle the authentication logic and conditional rendering
+function AuthGate({ children }: { children: ReactNode }) {
+  const { user, isUserLoading } = useUser();
+
+  if (isUserLoading) {
+    // While checking auth state, you can show a global loader
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  // Once loading is complete, render the children
+  return <>{children}</>;
+}
+
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
@@ -35,7 +53,7 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       auth={firebaseServices.auth}
       firestore={firebaseServices.firestore}
     >
-      {children}
+      <AuthGate>{children}</AuthGate>
     </FirebaseProvider>
   );
 }
