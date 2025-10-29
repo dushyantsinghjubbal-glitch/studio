@@ -34,8 +34,8 @@ const propertySchema = z.object({
     pinCode: z.string().optional(),
     depositAmount: z.coerce.number().optional(),
     maintenanceCharge: z.coerce.number().optional(),
-    rentDueDate: z.date().optional(),
-    availabilityDate: z.date().optional(),
+    rentDueDate: z.date().optional().nullable(),
+    availabilityDate: z.date().optional().nullable(),
     notes: z.string().optional(),
     currentTenantId: z.string().optional(),
 });
@@ -94,8 +94,8 @@ export default function PropertiesPage() {
       const propertyData = {
           ...data,
           currentTenantId: data.occupancyStatus === 'occupied' ? data.currentTenantId : '',
-          rentDueDate: data.rentDueDate,
-          availabilityDate: data.availabilityDate,
+          rentDueDate: data.rentDueDate || null,
+          availabilityDate: data.availabilityDate || null,
       };
       if (editingProperty) {
           await updateProperty({ ...editingProperty, ...propertyData });
@@ -327,7 +327,7 @@ export default function PropertiesPage() {
                                             {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} initialFocus /></PopoverContent>
                                 </Popover>
                             )} />
                         </div>
@@ -341,7 +341,7 @@ export default function PropertiesPage() {
                                             {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} initialFocus /></PopoverContent>
                                 </Popover>
                             )} />
                         </div>

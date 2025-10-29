@@ -17,10 +17,10 @@ export type Property = {
     rentAmount: number;
     depositAmount?: number;
     maintenanceCharge?: number;
-    rentDueDate?: Date;
+    rentDueDate?: Date | null;
     currentTenantId?: string;
     occupancyStatus: 'vacant' | 'occupied' | 'reserved';
-    availabilityDate?: Date;
+    availabilityDate?: Date | null;
     notes?: string;
     createdAt: string;
     updatedAt: string;
@@ -50,19 +50,29 @@ export type Tenant = {
 // Firestore converters
 const propertyConverter = {
     toFirestore: (property: Omit<Property, 'id'>) => {
-        return {
+        const data: any = {
             ...property,
             createdAt: property.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
+
+        // Convert undefined dates to null
+        if (data.rentDueDate === undefined) {
+            data.rentDueDate = null;
+        }
+        if (data.availabilityDate === undefined) {
+            data.availabilityDate = null;
+        }
+
+        return data;
     },
     fromFirestore: (snapshot: any, options: any): Property => {
         const data = snapshot.data(options);
         return {
             id: snapshot.id,
             ...data,
-            rentDueDate: data.rentDueDate?.toDate ? data.rentDueDate.toDate() : (data.rentDueDate ? new Date(data.rentDueDate) : undefined),
-            availabilityDate: data.availabilityDate?.toDate ? data.availabilityDate.toDate() : (data.availabilityDate ? new Date(data.availabilityDate) : undefined),
+            rentDueDate: data.rentDueDate?.toDate ? data.rentDueDate.toDate() : (data.rentDueDate ? new Date(data.rentDueDate) : null),
+            availabilityDate: data.availabilityDate?.toDate ? data.availabilityDate.toDate() : (data.availabilityDate ? new Date(data.availabilityDate) : null),
             createdAt: data.createdAt,
             updatedAt: data.updatedAt,
         } as Property;
