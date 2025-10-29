@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useContext } from 'react';
-import { PlusCircle, Trash2, Edit, Building, Store, Trees, Briefcase, Calendar as CalendarIcon, MoreVertical } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Building, Store, Trees, Briefcase, Calendar as CalendarIcon, MoreVertical, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
@@ -46,6 +46,7 @@ export default function PropertiesPage() {
   const { properties, tenants, addProperty, updateProperty, removeProperty, loading } = useContext(AppDataContext);
   const [isPropertyFormOpen, setIsPropertyFormOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   
   const propertyForm = useForm<PropertyFormValues>({
@@ -114,57 +115,72 @@ export default function PropertiesPage() {
   };
 
   const getPropertyIcon = (type: Property['type']) => {
+    const props = { className: "h-6 w-6 text-muted-foreground" };
     switch (type) {
-        case 'shop': return <Store className="h-8 w-8 text-muted-foreground" />;
-        case 'flat': return <Building className="h-8 w-8 text-muted-foreground" />;
-        case 'land': return <Trees className="h-8 w-8 text-muted-foreground" />;
-        case 'office': return <Briefcase className="h-8 w-8 text-muted-foreground" />;
-        default: return <Building className="h-8 w-8 text-muted-foreground" />;
+        case 'shop': return <Store {...props} />;
+        case 'flat': return <Building {...props} />;
+        case 'land': return <Trees {...props} />;
+        case 'office': return <Briefcase {...props} />;
+        default: return <Building {...props} />;
     }
   }
 
-  const occupancyStatusColors = {
-    vacant: 'bg-green-500/80 hover:bg-green-500/90',
-    occupied: 'bg-yellow-500/80 hover:bg-yellow-500/90',
-    reserved: 'bg-blue-500/80 hover:bg-blue-500/90',
+  const occupancyStatusColors: { [key in Property['occupancyStatus']]: string } = {
+    vacant: 'bg-green-100 text-green-800 border-green-200',
+    occupied: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    reserved: 'bg-blue-100 text-blue-800 border-blue-200',
   };
 
+  const filteredProperties = properties.filter(p => 
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.address.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+    <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 animate-in fade-in-50">
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                     <CardTitle>Properties</CardTitle>
                     <CardDescription>Manage your rental properties and their details.</CardDescription>
                 </div>
-                <Button onClick={() => openPropertyForm(null)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Property
-                </Button>
+                 <div className="flex items-center gap-2 w-full md:w-auto">
+                    <div className="relative flex-1 md:flex-initial">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input type="search" placeholder="Search properties..." className="pl-8" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                    </div>
+                    <Button onClick={() => openPropertyForm(null)}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Property
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
-                 {loading ? (<p>Loading properties...</p>) : (
-                    <div className="divide-y divide-border">
-                        {properties.map((property) => (
-                            <div key={property.id} className="flex items-center justify-between py-3">
-                                <div className="flex items-center gap-4">
-                                    {getPropertyIcon(property.type)}
-                                    <div>
-                                        <p className="font-medium">{property.name}</p>
-                                        <p className="text-sm text-muted-foreground">{property.address}</p>
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant={property.occupancyStatus === 'vacant' ? 'default' : 'secondary'} className={cn(occupancyStatusColors[property.occupancyStatus])}>
-                                                {property.occupancyStatus.charAt(0).toUpperCase() + property.occupancyStatus.slice(1)}
-                                            </Badge>
-                                             <p className="text-sm font-semibold">${property.rentAmount}/mo</p>
-                                        </div>
+                 {loading ? (<p>Loading properties...</p>) : filteredProperties.length === 0 ? (
+                    <div className="text-center py-12">
+                        <Building className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 className="mt-4 text-lg font-semibold">No properties found</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">{searchTerm ? 'Try adjusting your search.' : 'Get started by adding your first property.'}</p>
+                        <Button className="mt-6" onClick={() => openPropertyForm(null)}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add Property
+                        </Button>
+                    </div>
+                 ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredProperties.map((property) => (
+                            <Card key={property.id} className="flex flex-col">
+                                <CardHeader className="flex-row gap-4 items-center">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+                                        {getPropertyIcon(property.type)}
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-2">
+                                    <div className="flex-1">
+                                        <p className="font-semibold text-lg">{property.name}</p>
+                                        <p className="text-sm text-muted-foreground truncate">{property.address}</p>
+                                    </div>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
                                                 <MoreVertical className="h-4 w-4" />
                                             </Button>
                                         </DropdownMenuTrigger>
@@ -184,21 +200,34 @@ export default function PropertiesPage() {
                                                     <AlertDialogHeader>
                                                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                         <AlertDialogDescription>
-                                                            This action cannot be undone. This will permanently remove the property.
+                                                            This will permanently remove the property.
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                                                         <AlertDialogAction onClick={() => handleRemoveProperty(property.id)} className="bg-red-600 hover:bg-red-700">
-                                                            Yes, remove property
+                                                            Yes, remove
                                                         </AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
-                                </div>
-                            </div>
+                                </CardHeader>
+                                <CardContent className="flex-grow space-y-2">
+                                     <div className="text-sm font-semibold text-primary">
+                                        ${property.rentAmount}/month
+                                    </div>
+                                    <div className="text-sm text-muted-foreground capitalize">
+                                        Category: {property.category}
+                                    </div>
+                                </CardContent>
+                                <CardFooter>
+                                     <Badge variant="outline" className={cn("capitalize", occupancyStatusColors[property.occupancyStatus])}>
+                                        {property.occupancyStatus}
+                                    </Badge>
+                                </CardFooter>
+                            </Card>
                         ))}
                     </div>
                 )}
@@ -209,9 +238,6 @@ export default function PropertiesPage() {
             <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>{editingProperty ? 'Edit Property' : 'Add New Property'}</DialogTitle>
-                    <DialogDescription>
-                        {editingProperty ? 'Update the details for your property.' : 'Enter the details for your new property.'}
-                    </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={propertyForm.handleSubmit(handlePropertyFormSubmit)} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-6">
                     <div className="grid md:grid-cols-2 gap-4">
@@ -363,5 +389,3 @@ export default function PropertiesPage() {
     </main>
   );
 }
-
-    

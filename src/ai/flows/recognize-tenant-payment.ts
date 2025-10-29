@@ -1,67 +1,61 @@
 'use server';
 /**
- * @fileOverview An AI flow to recognize tenant and payment amount from a screenshot.
+ * @fileOverview An AI flow to recognize transaction details from a receipt.
  *
- * - recognizeTenantPayment - A function that handles the tenant payment recognition process.
- * - RecognizeTenantPaymentInput - The input type for the function.
- * - RecognizeTenantPaymentOutput - The return type for the function.
+ * - recognizeTransaction - A function that handles the transaction recognition process.
+ * - RecognizeTransactionInput - The input type for the function.
+ * - RecognizeTransactionOutput - The return type for the function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const TenantInfoSchema = z.object({
-    name: z.string().describe('The name of the tenant.'),
-    rentAmount: z.number().describe('The expected rent amount for the tenant.')
-});
-
-const RecognizeTenantPaymentInputSchema = z.object({
+export const RecognizeTransactionInputSchema = z.object({
   photoDataUri: z
     .string()
     .describe(
-      "A photo of a payment screenshot, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "A photo of a receipt or invoice, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
-  tenants: z.array(TenantInfoSchema).describe('A list of possible tenants and their expected rent.'),
+  context: z.string().describe("Context about what kind of transaction this is, e.g. 'Rent payment' or 'Grocery receipt'"),
 });
-export type RecognizeTenantPaymentInput = z.infer<typeof RecognizeTenantPaymentInputSchema>;
+export type RecognizeTransactionInput = z.infer<typeof RecognizeTransactionInputSchema>;
 
-const RecognizeTenantPaymentOutputSchema = z.object({
-  tenantName: z.string().describe('The name of the tenant identified from the screenshot.'),
-  amount: z.number().describe("The payment amount identified from the screenshot."),
+export const RecognizeTransactionOutputSchema = z.object({
+  title: z.string().describe('A short, descriptive title for the transaction, like "Monthly Rent" or "Grocery Shopping".'),
+  amount: z.number().describe("The total amount of the transaction found on the receipt."),
+  date: z.string().format('date-time').describe('The date of the transaction in ISO 8601 format (YYYY-MM-DD).'),
+  category: z.enum(['Rent Received', 'Utilities', 'Maintenance', 'Salary', 'Groceries', 'Other']).describe('The category of the transaction.'),
 });
-export type RecognizeTenantPaymentOutput = z.infer<typeof RecognizeTenantPaymentOutputSchema>;
+export type RecognizeTransactionOutput = z.infer<typeof RecognizeTransactionOutputSchema>;
 
-export async function recognizeTenantPayment(input: RecognizeTenantPaymentInput): Promise<RecognizeTenantPaymentOutput> {
-  return recognizeTenantPaymentFlow(input);
+export async function recognizeTransaction(input: RecognizeTransactionInput): Promise<RecognizeTransactionOutput> {
+  return recognizeTransactionFlow(input);
 }
 
 const prompt = ai.definePrompt({
-  name: 'recognizeTenantPaymentPrompt',
-  input: {schema: RecognizeTenantPaymentInputSchema},
-  output: {schema: RecognizeTenantPaymentOutputSchema},
-  prompt: `You are an expert at reading payment screenshots for a rent management app.
-Your task is to identify the tenant's name and the amount paid from the provided screenshot.
+  name: 'recognizeTransactionPrompt',
+  input: {schema: RecognizeTransactionInputSchema},
+  output: {schema: RecognizeTransactionOutputSchema},
+  prompt: `You are an expert financial assistant for an app called Expro. Your task is to extract transaction details from a user-uploaded receipt image.
 
-Here is the list of potential tenants and their expected rent:
-{{#each tenants}}
-- Name: {{name}}, Expected Rent: {{rentAmount}}
-{{/each}}
+Context provided by user: {{{context}}}
 
-Analyze the attached screenshot. The screenshot may contain names, bank transfer details, or other payment app information.
-- From the text in the screenshot, determine which tenant made the payment. Match the name to one of the tenants in the list provided.
-- Extract the exact payment amount.
-- Return the matched tenant's name and the extracted amount.
+Based on the context and the content of the receipt image, extract the following information:
+1.  **Title**: Create a brief, clear title for the transaction.
+2.  **Amount**: Find the total amount paid.
+3.  **Date**: Find the date of the transaction and format it as YYYY-MM-DD.
+4.  **Category**: Categorize the transaction into one of the following: 'Rent Received', 'Utilities', 'Maintenance', 'Salary', 'Groceries', 'Other'.
 
-If you cannot confidently determine the tenant or the amount, make your best guess.
+Analyze the attached image and return the extracted details in the specified format.
 
-Screenshot: {{media url=photoDataUri}}`,
+Receipt Image: {{media url=photoDataUri}}`,
 });
 
-const recognizeTenantPaymentFlow = ai.defineFlow(
+const recognizeTransactionFlow = ai.defineFlow(
   {
-    name: 'recognizeTenantPaymentFlow',
-    inputSchema: RecognizeTenantPaymentInputSchema,
-    outputSchema: RecognizeTenantPaymentOutputSchema,
+    name: 'recognizeTransactionFlow',
+    inputSchema: RecognizeTransactionInputSchema,
+    outputSchema: RecognizeTransactionOutputSchema,
   },
   async input => {
     const {output} = await prompt(input);

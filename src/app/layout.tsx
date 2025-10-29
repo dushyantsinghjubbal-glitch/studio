@@ -1,11 +1,10 @@
 'use client';
 
-import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarHeader, SidebarInset, SidebarItem, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarItem, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { Home, Users, Building, LogOut } from 'lucide-react';
+import { Home, Users, Building, LogOut, Wallet, BotMessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppDataProvider } from '@/context/AppDataContext';
 import { FirebaseClientProvider, useUser, useAuth } from '@/firebase';
@@ -34,8 +33,8 @@ function UserMenu() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10 border-2 border-primary">
                         <AvatarImage src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt={user.displayName || user.email || ''} />
                         <AvatarFallback>{user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                     </Avatar>
@@ -59,26 +58,21 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <title>Rent Manager</title>
-        <meta name="description" content="A simple app to manage rental properties and payments." />
+        <title>Expro - Finance Manager</title>
+        <meta name="description" content="A simple app to manage rental properties and finances." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased" style={{ fontFamily: "'Poppins', sans-serif" }}>
         <FirebaseClientProvider>
           <AppDataProvider>
               <SidebarProvider>
                   <Sidebar>
                       <SidebarHeader>
-                          <div className="flex items-center gap-2">
-                              <Button asChild variant="ghost" className="w-full justify-start">
-                                  <Link href="/">
-                                      <Home className="h-5 w-5 text-primary" />
-                                      <span className="text-lg font-bold tracking-tight">RentBox</span>
-                                  </Link>
-                              </Button>
+                          <div className="flex items-center gap-2 p-2">
+                              <BotMessageSquare className="h-8 w-8 text-primary" />
+                              <span className="text-2xl font-bold tracking-tight">Expro</span>
                           </div>
                       </SidebarHeader>
                       <SidebarContent>
@@ -88,6 +82,14 @@ export default function RootLayout({
                                       <Link href="/">
                                           <Home />
                                           <span>Dashboard</span>
+                                      </Link>
+                                  </SidebarMenuButton>
+                              </SidebarMenuItem>
+                               <SidebarMenuItem>
+                                  <SidebarMenuButton asChild tooltip="Ledger">
+                                      <Link href="/ledger">
+                                          <Wallet />
+                                          <span>Ledger</span>
                                       </Link>
                                   </SidebarMenuButton>
                               </SidebarMenuItem>
@@ -114,7 +116,7 @@ export default function RootLayout({
                         </SidebarFooter>
                   </Sidebar>
                   <SidebarInset>
-                      <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+                      <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
                           <SidebarTrigger className="md:hidden"/>
                       </header>
                       {children}

@@ -15,13 +15,11 @@ export const PendingReceipt: React.FC<PendingReceiptProps> = ({ tenant, property
   const receiptRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    // Dynamically load the Google Fonts stylesheet
     const link = document.createElement('link');
-    link.href = "https://fonts.googleapis.com/css2?family=Roboto:wght@400;600&display=swap";
+    link.href = "https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap";
     link.rel = "stylesheet";
     document.head.appendChild(link);
     
-    // Signal that component has rendered for PDF generation if needed
     if (onRendered) {
         onRendered();
     }
@@ -35,7 +33,6 @@ export const PendingReceipt: React.FC<PendingReceiptProps> = ({ tenant, property
     const element = receiptRef.current;
     if (!element) return;
 
-    // Dynamically import html2pdf
     const html2pdf = (await import('html2pdf.js')).default;
     
     const opt = {
@@ -53,10 +50,11 @@ export const PendingReceipt: React.FC<PendingReceiptProps> = ({ tenant, property
     <>
       <style jsx global>{`
         .receipt-container {
-          font-family: 'Roboto', sans-serif;
+          font-family: 'Poppins', sans-serif;
           background-color: #f5f7fa;
           margin: 0;
           padding: 20px;
+          color: #333;
         }
 
         .receipt {
@@ -66,38 +64,39 @@ export const PendingReceipt: React.FC<PendingReceiptProps> = ({ tenant, property
           padding: 20px;
           border-radius: 12px;
           box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-          color: #333;
         }
 
         .header {
           text-align: center;
-          background-color: #1e88e5;
-          color: white;
-          padding: 12px;
+          background-color: hsl(var(--primary));
+          color: hsl(var(--primary-foreground));
+          padding: 15px;
           border-radius: 8px;
         }
 
         .header h1 {
           margin: 0;
-          font-size: 20px;
+          font-size: 22px;
+          font-weight: 600;
         }
 
         .section {
-          margin-top: 15px;
+          margin-top: 20px;
         }
 
         .section-title {
           font-weight: 600;
           border-bottom: 2px solid #e0e0e0;
-          margin-bottom: 6px;
-          color: #1e88e5;
+          margin-bottom: 8px;
+          color: hsl(var(--primary));
           padding-bottom: 4px;
+          font-size: 16px;
         }
 
         .receipt-table {
           width: 100%;
           border-collapse: collapse;
-          margin-top: 6px;
+          margin-top: 8px;
         }
 
         .receipt-table td {
@@ -109,31 +108,38 @@ export const PendingReceipt: React.FC<PendingReceiptProps> = ({ tenant, property
         .receipt-table tr:last-child td {
             border-bottom: none;
         }
+        
+        .receipt-table td:first-child {
+            font-weight: 600;
+            color: #555;
+        }
 
         .warning {
           background-color: #fff5f5;
           color: #d32f2f;
-          padding: 10px;
-          border-radius: 6px;
-          margin-top: 10px;
+          padding: 12px;
+          border-radius: 8px;
+          margin-top: 15px;
           font-weight: 500;
           font-size: 14px;
+          border-left: 4px solid #d32f2f;
         }
 
         .remarks {
           background-color: #f1f8e9;
-          padding: 10px;
-          border-radius: 6px;
-          margin-top: 10px;
+          padding: 12px;
+          border-radius: 8px;
+          margin-top: 15px;
           font-size: 14px;
+          border-left: 4px solid #8bc34a;
         }
 
         .footer {
           text-align: center;
           font-size: 12px;
           color: #777;
-          margin-top: 15px;
-          padding-top: 10px;
+          margin-top: 20px;
+          padding-top: 15px;
           border-top: 1px solid #eee;
         }
       `}</style>
@@ -147,8 +153,8 @@ export const PendingReceipt: React.FC<PendingReceiptProps> = ({ tenant, property
             <div className="section-title">Property Owner</div>
             <table className="receipt-table">
               <tbody>
-                <tr><td><strong>Name:</strong></td><td>Dushyant Singh</td></tr>
-                <tr><td><strong>Address:</strong></td><td>Nerwa, Tehsil Nerwa, Shimla (HP)</td></tr>
+                <tr><td>Name:</td><td>Dushyant Singh</td></tr>
+                <tr><td>Address:</td><td>Nerwa, Tehsil Nerwa, Shimla (HP)</td></tr>
               </tbody>
             </table>
           </div>
@@ -157,10 +163,10 @@ export const PendingReceipt: React.FC<PendingReceiptProps> = ({ tenant, property
             <div className="section-title">Tenant Details</div>
             <table className="receipt-table">
               <tbody>
-                <tr><td><strong>Name:</strong></td><td>{tenant.name}</td></tr>
-                <tr><td><strong>Property:</strong></td><td>{tenant.propertyName}</td></tr>
-                {property?.type && <tr><td><strong>Type:</strong></td><td>{property.type}</td></tr>}
-                {property?.areaSize && <tr><td><strong>Area:</strong></td><td>{property.areaSize}</td></tr>}
+                <tr><td>Name:</td><td>{tenant.name}</td></tr>
+                <tr><td>Property:</td><td>{tenant.propertyName}</td></tr>
+                {property?.type && <tr><td>Type:</td><td>{property.type}</td></tr>}
+                {property?.areaSize && <tr><td>Area:</td><td>{property.areaSize}</td></tr>}
               </tbody>
             </table>
           </div>
@@ -169,11 +175,11 @@ export const PendingReceipt: React.FC<PendingReceiptProps> = ({ tenant, property
             <div className="section-title">Payment Details</div>
             <table className="receipt-table">
               <tbody>
-                <tr><td><strong>Month:</strong></td><td>{format(new Date(tenant.dueDate), 'MMMM yyyy')}</td></tr>
-                <tr><td><strong>Rent Amount:</strong></td><td>${tenant.rentAmount.toLocaleString()}</td></tr>
-                <tr><td><strong>Status:</strong></td><td>❌ Pending</td></tr>
-                <tr><td><strong>Due Date:</strong></td><td>{format(new Date(tenant.dueDate), 'dd-MMM-yyyy')}</td></tr>
-                <tr><td><strong>Payment Mode:</strong></td><td>Not Paid</td></tr>
+                <tr><td>Month:</td><td>{format(new Date(tenant.dueDate), 'MMMM yyyy')}</td></tr>
+                <tr><td>Rent Amount:</td><td>${tenant.rentAmount.toLocaleString()}</td></tr>
+                <tr><td>Status:</td><td>❌ Pending</td></tr>
+                <tr><td>Due Date:</td><td>{format(new Date(tenant.dueDate), 'dd-MMM-yyyy')}</td></tr>
+                <tr><td>Payment Mode:</td><td>Not Paid</td></tr>
               </tbody>
             </table>
           </div>
@@ -188,13 +194,13 @@ export const PendingReceipt: React.FC<PendingReceiptProps> = ({ tenant, property
             </div>
           )}
 
-          <div className="section" style={{ marginTop: '20px', fontSize: '14px' }}>
+          <div className="section" style={{ marginTop: '25px', fontSize: '14px' }}>
             <strong>Owner Signature:</strong> _____________________<br /><br />
             <strong>Date:</strong> {format(new Date(), 'dd-MMM-yyyy')}
           </div>
 
           <div className="footer">
-            Auto-generated via RentBox
+            Auto-generated via Expro
           </div>
         </div>
         

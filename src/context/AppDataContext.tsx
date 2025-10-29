@@ -3,7 +3,7 @@
 import React, { createContext, ReactNode, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export type Property = {
     id: string;
@@ -47,21 +47,30 @@ export type Tenant = {
     updatedAt: string;
 };
 
+export type Transaction = {
+    id: string;
+    title: string;
+    amount: number;
+    type: 'income' | 'expense';
+    category: 'Rent Received' | 'Utilities' | 'Maintenance' | 'Salary' | 'Groceries' | 'Other';
+    date: string;
+    receiptUrl?: string;
+    notes?: string;
+    tenantId?: string;
+    propertyId?: string;
+};
+
 
 // Firestore converters
 const propertyConverter = {
-    toFirestore: (property: Omit<Property, 'id'>) => {
+    toFirestore: (property: Omit<Property, 'id'> | Property) => {
         const data: any = {
             ...property,
-            createdAt: property.createdAt || new Date().toISOString(),
+            createdAt: 'createdAt' in property ? property.createdAt : new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
-
-        // Convert undefined dates to null
         data.rentDueDate = data.rentDueDate || null;
         data.availabilityDate = data.availabilityDate || null;
-
-
         return data;
     },
     fromFirestore: (snapshot: any, options: any): Property => {
@@ -78,12 +87,12 @@ const propertyConverter = {
 };
 
 const tenantConverter = {
-    toFirestore: (tenant: Omit<Tenant, 'id'>) => {
+    toFirestore: (tenant: Omit<Tenant, 'id'> | Tenant) => {
         return {
             ...tenant,
             dueDate: tenant.dueDate,
             netTerms: tenant.netTerms || 0,
-            createdAt: tenant.createdAt || new Date().toISOString(),
+            createdAt: 'createdAt' in tenant ? tenant.createdAt : new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
     },
@@ -92,13 +101,28 @@ const tenantConverter = {
         return {
             id: snapshot.id,
             ...data,
-            dueDate: data.dueDate.toDate ? data.dueDate.toDate() : new Date(data.dueDate),
+            dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : new Date(data.dueDate),
             createdAt: data.createdAt,
             updatedAt: data.updatedAt,
         } as Tenant;
     }
 };
 
+const transactionConverter = {
+    toFirestore: (transaction: Omit<Transaction, 'id'>) => {
+        return {
+            ...transaction,
+            date: transaction.date,
+        };
+    },
+    fromFirestore: (snapshot: any, options: any): Transaction => {
+        const data = snapshot.data(options);
+        return {
+            id: snapshot.id,
+            ...data,
+        } as Transaction;
+    }
+};
 
 interface AppDataContextProps {
     tenants: Tenant[];
@@ -109,6 +133,8 @@ interface AppDataContextProps {
     addProperty: (property: Omit<Property, 'id' | 'createdAt' | 'updatedAt' >) => Promise<void>;
     updateProperty: (property: Property) => Promise<void>;
     removeProperty: (propertyId: string) => Promise<void>;
+    transactions: Transaction[];
+    addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<string | undefined>;
     loading: boolean;
     error: any;
 }
@@ -122,6 +148,8 @@ export const AppDataContext = createContext<AppDataContextProps>({
     addProperty: async () => {},
     updateProperty: async () => {},
     removeProperty: async () => {},
+    transactions: [],
+    addTransaction: async () => { return undefined; },
     loading: true,
     error: null,
 });
@@ -131,10 +159,12 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
 
     const tenantsQuery = useMemoFirebase(() => collection(firestore, 'tenants').withConverter(tenantConverter), [firestore]);
     const propertiesQuery = useMemoFirebase(() => collection(firestore, 'properties').withConverter(propertyConverter), [firestore]);
+    const transactionsQuery = useMemoFirebase(() => collection(firestore, 'transactions').withConverter(transactionConverter), [firestore]);
 
     const { data: tenants = [], isLoading: tenantsLoading, error: tenantsError } = useCollection<Tenant>(tenantsQuery);
     const { data: properties = [], isLoading: propertiesLoading, error: propertiesError } = useCollection<Property>(propertiesQuery);
-
+    const { data: transactions = [], isLoading: transactionsLoading, error: transactionsError } = useCollection<Transaction>(transactionsQuery);
+    
     const addTenant = async (tenantData: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt'>) => {
         const newId = doc(collection(firestore, 'tenants')).id;
         const now = new Date().toISOString();
@@ -182,6 +212,13 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         deleteDocumentNonBlocking(propertyRef);
     };
 
+    const addTransaction = async (transactionData: Omit<Transaction, 'id'>) => {
+        const colRef = collection(firestore, 'transactions').withConverter(transactionConverter);
+        const docRef = await addDocumentNonBlocking(colRef, transactionData);
+        return docRef?.id;
+    };
+
+
     const value = {
         tenants: tenants ?? [],
         addTenant,
@@ -191,8 +228,10 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         addProperty,
         updateProperty,
         removeProperty,
-        loading: tenantsLoading || propertiesLoading,
-        error: tenantsError || propertiesError,
+        transactions: transactions ?? [],
+        addTransaction,
+        loading: tenantsLoading || propertiesLoading || transactionsLoading,
+        error: tenantsError || propertiesError || transactionsError,
     };
 
     return (

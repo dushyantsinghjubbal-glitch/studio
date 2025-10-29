@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useContext, useEffect } from 'react';
-import { PlusCircle, Trash2, Edit, Building, Store, Calendar as CalendarIcon, MoreVertical } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, MoreVertical, Calendar as CalendarIcon, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AppDataContext, Tenant } from '@/context/AppDataContext';
+import { Badge } from '@/components/ui/badge';
 
 
 const tenantSchema = z.object({
@@ -28,7 +29,7 @@ const tenantSchema = z.object({
     dueDate: z.date({ required_error: "Due date is required."}),
     phone: z.string().optional(),
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
-    propertyId: z.string().optional(), // Not required, but used for selection
+    propertyId: z.string().optional(),
     propertyName: z.string().min(1, 'Property name is required'),
     propertyAddress: z.string().min(1, 'Property address is required'),
     depositAmount: z.coerce.number().optional(),
@@ -126,7 +127,7 @@ export default function TenantsPage() {
   };
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
+    <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 animate-in fade-in-50">
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -134,70 +135,88 @@ export default function TenantsPage() {
                     <CardDescription>Manage your tenants and their information.</CardDescription>
                 </div>
                 <Button onClick={() => openTenantForm(null)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
+                    <UserPlus className="mr-2 h-4 w-4" />
                     Add Tenant
                 </Button>
             </CardHeader>
             <CardContent>
-                {loading ? (<p>Loading tenants...</p>) : (
-                    <div className="divide-y divide-border">
-                        {tenants.map((tenant) => {
-                            return (
-                                <div key={tenant.id} className="flex items-center justify-between py-3">
-                                    <div className="flex items-center gap-4">
-                                        <Avatar className="h-12 w-12">
-                                            <AvatarImage src={`https://i.pravatar.cc/150?u=${tenant.id}`} />
-                                            <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="font-medium">{tenant.name}</p>
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                <Building className="h-4 w-4" />
-                                                <span>{tenant.propertyName}</span>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground">Rent: ${tenant.rentAmount} | Due on: {format(new Date(tenant.dueDate), 'PPP')}</p>
-                                        </div>
+                {loading ? (<p>Loading tenants...</p>) : tenants.length === 0 ? (
+                    <div className="text-center py-12">
+                        <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 className="mt-4 text-lg font-semibold">No tenants found</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">Get started by adding your first tenant.</p>
+                        <Button className="mt-6" onClick={() => openTenantForm(null)}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add Tenant
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {tenants.map((tenant) => (
+                            <Card key={tenant.id} className="flex flex-col">
+                                <CardHeader className="flex-row gap-4 items-start">
+                                    <Avatar className="h-12 w-12 border">
+                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${tenant.id}`} />
+                                        <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1">
+                                        <p className="font-semibold text-lg">{tenant.name}</p>
+                                        <p className="text-sm text-muted-foreground">{tenant.propertyName}</p>
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => openTenantForm(tenant)}>
-                                                    <Edit className="mr-2 h-4 w-4" />
-                                                    <span>Edit Tenant</span>
-                                                </DropdownMenuItem>
-                                                 <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                            <Trash2 className="mr-2 h-4 w-4 text-red-500" />
-                                                            <span className="text-red-500">Remove Tenant</span>
-                                                        </DropdownMenuItem>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This action cannot be undone. This will permanently remove {tenant.name} and all their data.
-                                                        </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleRemoveTenant(tenant.id)} className="bg-red-600 hover:bg-red-700">
-                                                            Yes, remove tenant
-                                                        </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => openTenantForm(tenant)}>
+                                                <Edit className="mr-2 h-4 w-4" />
+                                                <span>Edit</span>
+                                            </DropdownMenuItem>
+                                             <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        <span>Remove</span>
+                                                    </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action cannot be undone. This will permanently remove {tenant.name}.
+                                                    </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleRemoveTenant(tenant.id)} className="bg-red-600 hover:bg-red-700">
+                                                        Remove Tenant
+                                                    </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </CardHeader>
+                                <CardContent className="flex-grow space-y-2">
+                                     <div className="text-sm text-muted-foreground">
+                                        Rent: <span className="font-semibold text-foreground">${tenant.rentAmount.toLocaleString()}</span>
                                     </div>
-                                </div>
-                            )
-                        })}
+                                    <div className="text-sm text-muted-foreground">
+                                        Due on: <span className="font-semibold text-foreground">{format(new Date(tenant.dueDate), 'do MMMM')}</span>
+                                    </div>
+                                </CardContent>
+                                <CardFooter>
+                                     <Badge variant={tenant.paymentStatus === 'paid' ? 'default' : 'destructive'} className={cn(
+                                        tenant.paymentStatus === 'paid' && 'bg-accent text-accent-foreground',
+                                        tenant.paymentStatus === 'overdue' && 'bg-red-600 text-white'
+                                     )}>
+                                        {tenant.paymentStatus.charAt(0).toUpperCase() + tenant.paymentStatus.slice(1)}
+                                    </Badge>
+                                </CardFooter>
+                            </Card>
+                        ))}
                     </div>
                 )}
             </CardContent>
@@ -210,34 +229,16 @@ export default function TenantsPage() {
                     <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={tenantForm.handleSubmit(handleTenantFormSubmit)} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Tenant Name</Label>
-                            <Input id="name" {...tenantForm.register('name')} />
-                            {tenantForm.formState.errors.name && <p className="text-red-500 text-xs">{tenantForm.formState.errors.name.message}</p>}
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="phone">Phone (for WhatsApp)</Label>
-                            <Input id="phone" {...tenantForm.register('phone')} />
-                        </div>
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="email">Email (Optional)</Label>
-                        <Input id="email" type="email" {...tenantForm.register('email')} />
-                         {tenantForm.formState.errors.email && <p className="text-red-500 text-xs">{tenantForm.formState.errors.email.message}</p>}
-                    </div>
-
                     {!editingTenant && (
-                      <div className="grid gap-2">
-                          <Label>Select Property</Label>
+                      <div className="grid gap-2 p-4 bg-muted/50 rounded-lg">
+                          <Label>Auto-fill from Property</Label>
                           <Controller
                               name="propertyId"
                               control={tenantForm.control}
                               render={({ field }) => (
                                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                                       <SelectTrigger>
-                                          <SelectValue placeholder="Select a property to auto-fill" />
+                                          <SelectValue placeholder="Select a property..." />
                                       </SelectTrigger>
                                       <SelectContent>
                                           {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name} - {p.address}</SelectItem>)}
@@ -248,8 +249,25 @@ export default function TenantsPage() {
                       </div>
                     )}
 
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="name">Tenant Name</Label>
+                            <Input id="name" {...tenantForm.register('name')} />
+                            {tenantForm.formState.errors.name && <p className="text-red-500 text-xs">{tenantForm.formState.errors.name.message}</p>}
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="phone">Phone (Optional)</Label>
+                            <Input id="phone" {...tenantForm.register('phone')} />
+                        </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="email">Email (Optional)</Label>
+                        <Input id="email" type="email" {...tenantForm.register('email')} />
+                         {tenantForm.formState.errors.email && <p className="text-red-500 text-xs">{tenantForm.formState.errors.email.message}</p>}
+                    </div>
+                    
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="propertyName">Property Name</Label>
                             <Input id="propertyName" {...tenantForm.register('propertyName')} />
@@ -300,7 +318,7 @@ export default function TenantsPage() {
                             {tenantForm.formState.errors.dueDate && <p className="text-red-500 text-xs">{tenantForm.formState.errors.dueDate.message}</p>}
                         </div>
                          <div className="grid gap-2">
-                            <Label htmlFor="depositAmount">Deposit Amount ($)</Label>
+                            <Label htmlFor="depositAmount">Deposit ($)</Label>
                             <Input id="depositAmount" type="number" {...tenantForm.register('depositAmount')} />
                         </div>
                     </div>
@@ -314,7 +332,7 @@ export default function TenantsPage() {
                                 render={({ field }) => (
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select a payment method" />
+                                            <SelectValue placeholder="Select..." />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="cash">Cash</SelectItem>
@@ -325,7 +343,6 @@ export default function TenantsPage() {
                                     </Select>
                                 )}
                             />
-                             {tenantForm.formState.errors.paymentMethod && <p className="text-red-500 text-xs">{tenantForm.formState.errors.paymentMethod.message}</p>}
                         </div>
                          <div className="grid gap-2">
                             <Label>Net Terms (Grace Period)</Label>
@@ -348,7 +365,6 @@ export default function TenantsPage() {
                             />
                         </div>
                     </div>
-
 
                      <div className="grid gap-2">
                         <Label htmlFor="notes">Notes</Label>

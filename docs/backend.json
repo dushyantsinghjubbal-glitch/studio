@@ -73,7 +73,7 @@
         },
         "notes": {
           "type": "string",
-description": "Extra remarks (e.g., 'needs repaint before next tenant')."
+          "description": "Extra remarks (e.g., 'needs repaint before next tenant')."
         },
         "createdAt": {
           "type": "string",
@@ -146,10 +146,6 @@ description": "Extra remarks (e.g., 'needs repaint before next tenant')."
             "other"
           ]
         },
-        "lastPaymentMonth": {
-          "type": "string",
-          "description": "Last month for which payment was made (e.g., 'YYYY-MM')."
-        },
         "paymentStatus": {
           "type": "string",
           "description": "Payment status.",
@@ -196,6 +192,58 @@ description": "Extra remarks (e.g., 'needs repaint before next tenant')."
         "createdAt",
         "updatedAt"
       ]
+    },
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a single financial transaction, either income or expense.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Auto-generated unique identifier for the transaction."
+        },
+        "title": {
+          "type": "string",
+          "description": "A brief title for the transaction, e.g., 'January Rent'."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The monetary value of the transaction."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of transaction.",
+          "enum": ["income", "expense"]
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the transaction.",
+          "enum": ["Rent Received", "Utilities", "Maintenance", "Salary", "Groceries", "Other"]
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time the transaction occurred."
+        },
+        "receiptUrl": {
+          "type": "string",
+          "description": "Optional URL to a scanned receipt image in storage."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes about the transaction."
+        },
+        "tenantId": {
+          "type": "string",
+          "description": "Optional link to the tenant if it's a rent payment."
+        },
+        "propertyId": {
+            "type": "string",
+            "description": "Optional link to the property related to the transaction."
+        }
+      },
+      "required": ["id", "title", "amount", "type", "category", "date"]
     }
   },
   "auth": {
@@ -217,6 +265,12 @@ description": "Extra remarks (e.g., 'needs repaint before next tenant')."
         "$ref": "#/entities/Tenant"
       },
       "description": "Stores all tenant information."
+    },
+    "/transactions/{transactionId}": {
+        "schema": {
+            "$ref": "#/entities/Transaction"
+        },
+        "description": "Stores all financial transactions (income and expenses)."
     }
   }
 }
