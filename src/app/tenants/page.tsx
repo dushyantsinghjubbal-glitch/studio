@@ -24,43 +24,60 @@ import { AppDataContext, Tenant } from '@/context/AppDataContext';
 
 const tenantSchema = z.object({
     name: z.string().min(1, 'Name is required'),
-    rent: z.coerce.number().min(1, 'Rent must be a positive number'),
+    rentAmount: z.coerce.number().min(1, 'Rent must be a positive number'),
     dueDate: z.date({ required_error: "Due date is required."}),
-    whatsappNumber: z.string().optional(),
-    propertyId: z.string().min(1, 'Please select a property'),
+    phone: z.string().optional(),
+    email: z.string().email('Invalid email address').optional().or(z.literal('')),
+    propertyName: z.string().min(1, 'Property name is required'),
+    propertyAddress: z.string().min(1, 'Property address is required'),
+    depositAmount: z.coerce.number().optional(),
+    paymentMethod: z.enum(['cash', 'bank', 'upi', 'other']),
+    notes: z.string().optional(),
 });
 
 type TenantFormValues = z.infer<typeof tenantSchema>;
 
 export default function TenantsPage() {
-  const { tenants, properties, addTenant, updateTenant, removeTenant, loading } = useContext(AppDataContext);
+  const { tenants, addTenant, updateTenant, removeTenant, loading } = useContext(AppDataContext);
   const [isTenantFormOpen, setIsTenantFormOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const { toast } = useToast();
 
   const tenantForm = useForm<TenantFormValues>({
     resolver: zodResolver(tenantSchema),
+    defaultValues: {
+        paymentMethod: 'bank',
+    }
   });
 
-  const getPropertyForTenant = (tenant: Tenant) => properties.find(p => p.id === tenant.propertyId);
 
   const openTenantForm = (tenant: Tenant | null) => {
     setEditingTenant(tenant);
     if (tenant) {
         tenantForm.reset({
             name: tenant.name,
-            rent: tenant.rent,
+            rentAmount: tenant.rentAmount,
             dueDate: new Date(tenant.dueDate),
-            whatsappNumber: tenant.whatsappNumber || '',
-            propertyId: tenant.propertyId,
+            phone: tenant.phone || '',
+            email: tenant.email || '',
+            propertyName: tenant.propertyName,
+            propertyAddress: tenant.propertyAddress,
+            depositAmount: tenant.depositAmount || 0,
+            paymentMethod: tenant.paymentMethod,
+            notes: tenant.notes || '',
         });
     } else {
         tenantForm.reset({
             name: '',
-            rent: 0,
+            rentAmount: 0,
             dueDate: undefined,
-            whatsappNumber: '',
-            propertyId: '',
+            phone: '',
+            email: '',
+            propertyName: '',
+            propertyAddress: '',
+            depositAmount: 0,
+            paymentMethod: 'bank',
+            notes: '',
         });
     }
     setIsTenantFormOpen(true);
@@ -100,23 +117,20 @@ export default function TenantsPage() {
                 {loading ? (<p>Loading tenants...</p>) : (
                     <div className="divide-y divide-border">
                         {tenants.map((tenant) => {
-                            const property = getPropertyForTenant(tenant);
                             return (
                                 <div key={tenant.id} className="flex items-center justify-between py-3">
                                     <div className="flex items-center gap-4">
                                         <Avatar className="h-12 w-12">
-                                            <AvatarImage src={tenant.avatar} />
+                                            <AvatarImage src={`https://i.pravatar.cc/150?u=${tenant.id}`} />
                                             <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
                                         </Avatar>
                                         <div>
                                             <p className="font-medium">{tenant.name}</p>
-                                            {property && (
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    {property.type === 'apartment' ? <Building className="h-4 w-4" /> : <Store className="h-4 w-4" />}
-                                                    <span>{property.name}</span>
-                                                </div>
-                                            )}
-                                            <p className="text-sm text-muted-foreground">Rent: ${tenant.rent} | Due on: {format(new Date(tenant.dueDate), 'PPP')}</p>
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <Building className="h-4 w-4" />
+                                                <span>{tenant.propertyName}</span>
+                                            </div>
+                                            <p className="text-sm text-muted-foreground">Rent: ${tenant.rentAmount} | Due on: {format(new Date(tenant.dueDate), 'PPP')}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
@@ -166,40 +180,47 @@ export default function TenantsPage() {
 
         {/* Tenant Add/Edit Dialog */}
         <Dialog open={isTenantFormOpen} onOpenChange={setIsTenantFormOpen}>
-            <DialogContent>
+            <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={tenantForm.handleSubmit(handleTenantFormSubmit)} className="grid gap-4 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="name">Tenant Name</Label>
+                            <Input id="name" {...tenantForm.register('name')} />
+                            {tenantForm.formState.errors.name && <p className="text-red-500 text-xs">{tenantForm.formState.errors.name.message}</p>}
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="phone">Phone (for WhatsApp)</Label>
+                            <Input id="phone" {...tenantForm.register('phone')} />
+                        </div>
+                    </div>
+
                     <div className="grid gap-2">
-                        <Label htmlFor="name">Tenant Name</Label>
-                        <Input id="name" {...tenantForm.register('name')} />
-                        {tenantForm.formState.errors.name && <p className="text-red-500 text-xs">{tenantForm.formState.errors.name.message}</p>}
+                        <Label htmlFor="email">Email (Optional)</Label>
+                        <Input id="email" type="email" {...tenantForm.register('email')} />
+                         {tenantForm.formState.errors.email && <p className="text-red-500 text-xs">{tenantForm.formState.errors.email.message}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="propertyName">Property Name</Label>
+                            <Input id="propertyName" {...tenantForm.register('propertyName')} />
+                            {tenantForm.formState.errors.propertyName && <p className="text-red-500 text-xs">{tenantForm.formState.errors.propertyName.message}</p>}
+                        </div>
+                         <div className="grid gap-2">
+                            <Label htmlFor="propertyAddress">Property Address</Label>
+                            <Input id="propertyAddress" {...tenantForm.register('propertyAddress')} />
+                            {tenantForm.formState.errors.propertyAddress && <p className="text-red-500 text-xs">{tenantForm.formState.errors.propertyAddress.message}</p>}
+                        </div>
                     </div>
                     
-                    <div className="grid gap-2">
-                        <Label>Property</Label>
-                        <Controller
-                            control={tenantForm.control}
-                            name="propertyId"
-                            render={({ field }) => (
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a property" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                         {tenantForm.formState.errors.propertyId && <p className="text-red-500 text-xs">{tenantForm.formState.errors.propertyId.message}</p>}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                          <div className="grid gap-2">
-                            <Label htmlFor="rent">Rent Amount ($)</Label>
-                            <Input id="rent" type="number" {...tenantForm.register('rent')} />
-                            {tenantForm.formState.errors.rent && <p className="text-red-500 text-xs">{tenantForm.formState.errors.rent.message}</p>}
+                            <Label htmlFor="rentAmount">Rent Amount ($)</Label>
+                            <Input id="rentAmount" type="number" {...tenantForm.register('rentAmount')} />
+                            {tenantForm.formState.errors.rentAmount && <p className="text-red-500 text-xs">{tenantForm.formState.errors.rentAmount.message}</p>}
                         </div>
                         <div className="grid gap-2">
                            <Label htmlFor="dueDate">Due Date</Label>                            <Controller
@@ -232,17 +253,43 @@ export default function TenantsPage() {
                             />
                             {tenantForm.formState.errors.dueDate && <p className="text-red-500 text-xs">{tenantForm.formState.errors.dueDate.message}</p>}
                         </div>
+                         <div className="grid gap-2">
+                            <Label htmlFor="depositAmount">Deposit Amount ($)</Label>
+                            <Input id="depositAmount" type="number" {...tenantForm.register('depositAmount')} />
+                        </div>
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="whatsappNumber">WhatsApp Number (Optional)</Label>
-                        <Input id="whatsappNumber" {...tenantForm.register('whatsappNumber')} />
+                        <Label>Payment Method</Label>
+                        <Controller
+                            control={tenantForm.control}
+                            name="paymentMethod"
+                            render={({ field }) => (
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a payment method" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="cash">Cash</SelectItem>
+                                        <SelectItem value="bank">Bank Transfer</SelectItem>
+                                        <SelectItem value="upi">UPI</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                         {tenantForm.formState.errors.paymentMethod && <p className="text-red-500 text-xs">{tenantForm.formState.errors.paymentMethod.message}</p>}
                     </div>
+
+                     <div className="grid gap-2">
+                        <Label htmlFor="notes">Notes</Label>
+                        <Input id="notes" {...tenantForm.register('notes')} />
+                    </div>
+
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button type="button" variant="outline">Cancel</Button>
                         </DialogClose>
-                        <Button type="submit">{editingTenant ? 'Save Changes' : 'Add Tenant'}</Button>
-                    </DialogFooter>
+                        <Button type="submit">{editingTenant ? 'Save Changes' : 'Add Tenant'}</Button>DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>

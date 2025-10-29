@@ -45,10 +45,8 @@ export default function DashboardPage() {
   const [isRentalReceiptFormOpen, setIsRentalReceiptFormOpen] = useState(false);
   const { toast } = useToast();
 
-  const totalIncome = tenants.filter(t => t.status === 'paid').reduce((acc, t) => acc + t.rent, 0);
-  const pendingRent = tenants.filter(t => t.status === 'pending').reduce((acc, t) => acc + t.rent, 0);
-
-  const getPropertyForTenant = (tenant: Tenant) => properties.find(p => p.id === tenant.propertyId);
+  const totalIncome = tenants.filter(t => t.paymentStatus === 'paid').reduce((acc, t) => acc + t.rentAmount, 0);
+  const pendingRent = tenants.filter(t => t.paymentStatus === 'pending').reduce((acc, t) => acc + t.rentAmount, 0);
 
   const rentalReceiptForm = useForm<RentalReceiptFormValues>({
     resolver: zodResolver(rentalReceiptSchema),
@@ -65,7 +63,7 @@ export default function DashboardPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'Tenant not found.' });
         return;
     }
-    const updatedTenantData = { ...tenant, status: 'paid' as 'paid', rent: data.amount };
+    const updatedTenantData = { ...tenant, paymentStatus: 'paid' as 'paid' | 'pending' | 'partial', rentAmount: data.amount, lastPaymentDate: data.paymentDate.toISOString() };
     await updateTenant(updatedTenantData);
     
     toast({
@@ -113,7 +111,7 @@ export default function DashboardPage() {
       const photoDataUri = await fileToDataUri(selectedFile);
       const recognitionInput: RecognizeTenantPaymentInput = {
         photoDataUri,
-        tenants: tenants.map(t => ({ name: t.name, rentAmount: t.rent }))
+        tenants: tenants.map(t => ({ name: t.name, rentAmount: t.rentAmount }))
       };
       
       const result = await recognizeTenantPayment(recognitionInput);
@@ -121,7 +119,7 @@ export default function DashboardPage() {
       const recognizedTenant = tenants.find(t => t.name.toLowerCase() === result.tenantName.toLowerCase());
 
       if (recognizedTenant && recognizedTenant.id === selectedTenant.id) {
-         const updatedTenantData = { ...recognizedTenant, status: 'paid' as 'paid' };
+         const updatedTenantData = { ...recognizedTenant, paymentStatus: 'paid' as 'paid' | 'pending' | 'partial', lastPaymentDate: new Date().toISOString() };
          await updateTenant(updatedTenantData);
         
         toast({
@@ -151,7 +149,7 @@ export default function DashboardPage() {
   
   const handleManualPayment = async () => {
     if (!selectedTenant) return;
-    const updatedTenantData = { ...selectedTenant, status: 'paid' as 'paid' };
+    const updatedTenantData = { ...selectedTenant, paymentStatus: 'paid' as 'paid' | 'pending' | 'partial', lastPaymentDate: new Date().toISOString() };
 
     await updateTenant(updatedTenantData);
 
@@ -171,10 +169,7 @@ export default function DashboardPage() {
   };
   
   const generateReceipt = async (tenant: Tenant, openDialog: boolean = false, paymentDate?: Date, amount?: number) => {
-    const property = getPropertyForTenant(tenant);
-    if (!property) return;
-
-    const receiptAmount = amount ?? tenant.rent;
+    const receiptAmount = amount ?? tenant.rentAmount;
 
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage();
@@ -206,9 +201,11 @@ export default function DashboardPage() {
     const billedToY = infoY - 70;
     page.drawText('BILLED TO', { x: 50, y: billedToY, font, size: 10, color: lightGrayColor });
     page.drawText(tenant.name, { x: 50, y: billedToY - 15, font: boldFont, size: 14, color: grayColor });
-    page.drawText(property.name, { x: 50, y: billedToY - 30, font, size: 12, color: grayColor });
+    page.drawText(tenant.propertyName, { x: 50, y: billedToY - 30, font, size: 12, color: grayColor });
+    page.drawText(tenant.propertyAddress, { x: 50, y: billedToY - 45, font, size: 12, color: grayColor });
 
-    const tableY = billedToY - 80;
+
+    const tableY = billedToY - 100;
     const tableHeaderY = tableY;
     page.drawText('DESCRIPTION', { x: 50, y: tableHeaderY, font, size: 10, color: lightGrayColor });
     page.drawText('AMOUNT', { x: width - 150, y: tableHeaderY, font, size: 10, color: lightGrayColor, });
@@ -221,7 +218,7 @@ export default function DashboardPage() {
     });
 
     const itemY = tableHeaderY - 30;
-    page.drawText(`Monthly Rent - ${property.type === 'shop' ? 'Shop' : 'Apartment'}`, { x: 50, y: itemY, font, size: 12, color: grayColor });
+    page.drawText(`Monthly Rent`, { x: 50, y: itemY, font, size: 12, color: grayColor });
     page.drawText(`$${receiptAmount.toLocaleString()}`, { x: width - 150, y: itemY, font: boldFont, size: 12, color: grayColor, });
 
     const totalY = itemY - 50;
@@ -234,12 +231,12 @@ export default function DashboardPage() {
     page.drawText('TOTAL', { x: width - 200, y: totalY - 20, font: boldFont, size: 14, color: grayColor });
     page.drawText(`$${receiptAmount.toLocaleString()}`, { x: width - 150, y: totalY - 20, font: boldFont, size: 14, color: primaryColor });
 
-    if (tenant.status === 'paid') {
+    if (tenant.paymentStatus === 'paid') {
       page.drawText('Thank you for your payment!', { x: 50, y: 80, font, size: 14, color: grayColor });
     }
 
-    const statusText = `Status: ${tenant.status.toUpperCase()}`;
-    const statusColor = tenant.status === 'paid' ? rgb(0, 0.5, 0) : rgb(0.8, 0, 0);
+    const statusText = `Status: ${tenant.paymentStatus.toUpperCase()}`;
+    const statusColor = tenant.paymentStatus === 'paid' ? rgb(0, 0.5, 0) : rgb(0.8, 0, 0);
     page.drawText(statusText, { x: 50, y: 60, font: boldFont, size: 12, color: statusColor });
 
 
@@ -260,8 +257,8 @@ export default function DashboardPage() {
     });
 
     for (const tenant of tenants) {
-      if (tenant.status === 'pending') {
-        const updatedTenantData = { ...tenant, status: 'paid' as 'paid' };
+      if (tenant.paymentStatus === 'pending') {
+        const updatedTenantData = { ...tenant, paymentStatus: 'paid' as 'paid' | 'pending' | 'partial', lastPaymentDate: new Date().toISOString() };
         await updateTenant(updatedTenantData);
         await generateReceipt(updatedTenantData, false);
       }
@@ -285,7 +282,7 @@ export default function DashboardPage() {
 
             await navigator.share({
                 title: `Rent Receipt for ${tenant.name}`,
-                text: `Hi ${tenant.name},\n\nHere is your rent receipt for $${tenant.rent}.`,
+                text: `Hi ${tenant.name},\n\nHere is your rent receipt for $${tenant.rentAmount}.`,
                 files: [file],
             });
         } catch (error) {
@@ -358,31 +355,28 @@ export default function DashboardPage() {
                {loading ? (<p>Loading payments...</p>) : (
                 <div className="divide-y divide-border">
                     {tenants.map((tenant) => {
-                        const property = getPropertyForTenant(tenant);
                         return (
                             <div key={tenant.id} className="flex items-center justify-between py-3">
                                 <div className="flex items-center gap-4">
                                     <Avatar className="h-12 w-12">
-                                        <AvatarImage src={tenant.avatar} />
+                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${tenant.id}`} />
                                         <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                     <div>
                                         <p className="font-medium">{tenant.name}</p>
-                                        {property && (
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                {property.type === 'apartment' ? <Building className="h-4 w-4" /> : <Store className="h-4 w-4" />}
-                                                <span>{property.name}</span>
-                                            </div>
-                                        )}
-                                        <p className="text-sm text-muted-foreground">Due on: {format(tenant.dueDate, 'PPP')}</p>
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <Building className="h-4 w-4" />
+                                            <span>{tenant.propertyName}</span>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">Due on: {format(new Date(tenant.dueDate), 'PPP')}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <div className="text-right">
-                                       <p className="font-semibold text-lg">${tenant.rent.toLocaleString()}</p>
-                                        <Badge variant={tenant.status === 'paid' ? 'default' : 'destructive'} className={tenant.status === 'paid' ? 'bg-green-500/80 hover:bg-green-500/90' : ''}>
-                                            {tenant.status === 'paid' ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
-                                            {tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)}
+                                       <p className="font-semibold text-lg">${tenant.rentAmount.toLocaleString()}</p>
+                                        <Badge variant={tenant.paymentStatus === 'paid' ? 'default' : tenant.paymentStatus === 'pending' ? 'destructive' : 'secondary'} className={tenant.paymentStatus === 'paid' ? 'bg-green-500/80 hover:bg-green-500/90' : ''}>
+                                            {tenant.paymentStatus === 'paid' ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
+                                            {tenant.paymentStatus.charAt(0).toUpperCase() + tenant.paymentStatus.slice(1)}
                                         </Badge>
                                     </div>
                                     <DropdownMenu>
@@ -392,7 +386,7 @@ export default function DashboardPage() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            {tenant.status === 'pending' && (
+                                            {tenant.paymentStatus !== 'paid' && (
                                                 <DropdownMenuItem onClick={() => openUploadDialog(tenant)}>
                                                     <Upload className="mr-2 h-4 w-4" />
                                                     <span>Upload Payment</span>

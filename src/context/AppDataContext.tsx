@@ -12,15 +12,25 @@ export type Property = {
 };
 
 export type Tenant = {
-  id: string;
-  name: string;
-  avatar: string;
-  rent: number;
-  status: 'paid' | 'pending';
-  dueDate: Date;
-  whatsappNumber?: string;
-  propertyId: string;
+    id: string;
+    name: string;
+    phone?: string;
+    email?: string;
+    propertyName: string;
+    propertyAddress: string;
+    rentAmount: number;
+    depositAmount?: number;
+    dueDate: Date;
+    paymentMethod: 'cash' | 'bank' | 'upi' | 'other';
+    lastPaymentMonth?: string;
+    paymentStatus: 'due' | 'paid' | 'partial';
+    lastReceiptUrl?: string;
+    lastPaymentDate?: string;
+    notes?: string;
+    createdAt: string;
+    updatedAt: string;
 };
+
 
 // Firestore converters
 const propertyConverter = {
@@ -37,23 +47,22 @@ const propertyConverter = {
 };
 
 const tenantConverter = {
-    toFirestore: (tenant: Tenant) => {
+    toFirestore: (tenant: Omit<Tenant, 'id'>) => {
         return {
-            name: tenant.name,
-            avatar: tenant.avatar,
-            rent: tenant.rent,
-            status: tenant.status,
+            ...tenant,
             dueDate: tenant.dueDate,
-            whatsappNumber: tenant.whatsappNumber,
-            propertyId: tenant.propertyId,
+            createdAt: tenant.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
         };
     },
-    fromFirestore: (snapshot: any, options: any) => {
+    fromFirestore: (snapshot: any, options: any): Tenant => {
         const data = snapshot.data(options);
         return { 
             id: snapshot.id, 
             ...data,
-            dueDate: data.dueDate.toDate(), // Convert Firestore Timestamp to Date
+            dueDate: data.dueDate.toDate ? data.dueDate.toDate() : new Date(data.dueDate),
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
         } as Tenant;
     }
 };
@@ -61,7 +70,7 @@ const tenantConverter = {
 
 interface AppDataContextProps {
     tenants: Tenant[];
-    addTenant: (tenant: Omit<Tenant, 'id' | 'status' | 'avatar'>) => Promise<void>;
+    addTenant: (tenant: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt' >) => Promise<void>;
     updateTenant: (tenant: Tenant) => Promise<void>;
     removeTenant: (tenantId: string) => Promise<void>;
     properties: Property[];
@@ -94,13 +103,15 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const { data: tenants = [], isLoading: tenantsLoading, error: tenantsError } = useCollection<Tenant>(tenantsQuery);
     const { data: properties = [], isLoading: propertiesLoading, error: propertiesError } = useCollection<Property>(propertiesQuery);
 
-    const addTenant = async (tenantData: Omit<Tenant, 'id' | 'status' | 'avatar'>) => {
+    const addTenant = async (tenantData: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt'>) => {
         const newId = doc(collection(firestore, 'tenants')).id;
+        const now = new Date().toISOString();
         const newTenant: Tenant = {
             id: newId,
             ...tenantData,
-            status: 'pending',
-            avatar: `https://i.pravatar.cc/150?u=${newId}`,
+            paymentStatus: 'due',
+            createdAt: now,
+            updatedAt: now,
         };
         const tenantRef = doc(firestore, 'tenants', newId).withConverter(tenantConverter);
         setDocumentNonBlocking(tenantRef, newTenant, {});
@@ -108,7 +119,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
 
     const updateTenant = async (tenant: Tenant) => {
         const tenantRef = doc(firestore, 'tenants', tenant.id).withConverter(tenantConverter);
-        setDocumentNonBlocking(tenantRef, tenant, { merge: true });
+        setDocumentNonBlocking(tenantRef, { ...tenant, updatedAt: new Date().toISOString() }, { merge: true });
     };
 
     const removeTenant = async (tenantId: string) => {

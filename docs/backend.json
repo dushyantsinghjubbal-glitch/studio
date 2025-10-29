@@ -17,53 +17,121 @@
         "type": {
           "type": "string",
           "description": "The type of property.",
-          "enum": ["apartment", "shop"]
+          "enum": [
+            "apartment",
+            "shop"
+          ]
         }
       },
-      "required": ["id", "name", "type"]
+      "required": [
+        "id",
+        "name",
+        "type"
+      ]
     },
     "Tenant": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Tenant",
       "type": "object",
-      "description": "Represents a tenant.",
+      "description": "Represents a tenant, now with more detailed information.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the tenant."
+          "description": "Auto-generated unique identifier for the tenant."
         },
         "name": {
           "type": "string",
-          "description": "The name of the tenant."
+          "description": "Tenant's full name."
         },
-        "avatar": {
+        "phone": {
           "type": "string",
-          "description": "URL for the tenant's avatar image."
+          "description": "Used for WhatsApp sharing (with country code)."
         },
-        "rent": {
+        "email": {
+          "type": "string",
+          "description": "Optional; for future email receipts.",
+          "format": "email"
+        },
+        "propertyName": {
+          "type": "string",
+          "description": "Shop, flat, or house name/number."
+        },
+        "propertyAddress": {
+          "type": "string",
+          "description": "Full address of the rented unit."
+        },
+        "rentAmount": {
           "type": "number",
-          "description": "The monthly rent amount."
+          "description": "Monthly rent amount."
         },
-        "status": {
-          "type": "string",
-          "description": "The payment status of the tenant.",
-          "enum": ["paid", "pending"]
+        "depositAmount": {
+          "type": "number",
+          "description": "Security deposit (optional)."
         },
         "dueDate": {
           "type": "string",
-          "description": "The rent due date.",
+          "description": "Rent due day each month.",
+          "format": "date"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Cash, Bank, UPI, etc.",
+          "enum": [
+            "cash",
+            "bank",
+            "upi",
+            "other"
+          ]
+        },
+        "lastPaymentMonth": {
+          "type": "string",
+          "description": "Last month for which payment was made (e.g., 'YYYY-MM')."
+        },
+        "paymentStatus": {
+          "type": "string",
+          "description": "Payment status.",
+          "enum": [
+            "due",
+            "paid",
+            "partial"
+          ]
+        },
+        "lastReceiptUrl": {
+          "type": "string",
+          "description": "PDF link to Firebase Storage."
+        },
+        "lastPaymentDate": {
+          "type": "string",
+          "description": "Actual payment date.",
           "format": "date-time"
         },
-        "whatsappNumber": {
+        "notes": {
           "type": "string",
-          "description": "The tenant's WhatsApp number."
+          "description": "Free text or remarks."
         },
-        "propertyId": {
+        "createdAt": {
           "type": "string",
-          "description": "The ID of the property the tenant is renting."
+          "description": "Timestamp of creation.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of last update.",
+          "format": "date-time"
         }
       },
-      "required": ["id", "name", "avatar", "rent", "status", "dueDate", "propertyId"]
+      "required": [
+        "id",
+        "name",
+        "propertyName",
+        "propertyAddress",
+        "rentAmount",
+        "dueDate",
+        "paymentMethod",
+        "paymentStatus",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "auth": {
@@ -73,12 +141,16 @@
   },
   "firestore": {
     "/properties/{propertyId}": {
-        "schema": { "$ref": "#/entities/Property" },
-        "description": "Stores all property information."
+      "schema": {
+        "$ref": "#/entities/Property"
+      },
+      "description": "Stores all property information."
     },
     "/tenants/{tenantId}": {
-        "schema": { "$ref": "#/entities/Tenant" },
-        "description": "Stores all tenant information."
+      "schema": {
+        "$ref": "#/entities/Tenant"
+      },
+      "description": "Stores all tenant information."
     }
   }
 }

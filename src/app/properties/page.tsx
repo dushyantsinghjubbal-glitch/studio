@@ -23,7 +23,7 @@ const propertySchema = z.object({
 type PropertyFormValues = z.infer<typeof propertySchema>;
 
 export default function PropertiesPage() {
-  const { properties, addProperty, updateProperty, removeProperty, tenants, loading } = useContext(AppDataContext);
+  const { properties, addProperty, updateProperty, removeProperty, loading } = useContext(AppDataContext);
   const [isPropertyFormOpen, setIsPropertyFormOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const { toast } = useToast();
@@ -62,10 +62,8 @@ export default function PropertiesPage() {
   };
   
   const handleRemoveProperty = (propertyId: string) => {
-    if (tenants.some(t => t.propertyId === propertyId)) {
-        toast({ variant: 'destructive', title: 'Cannot Remove Property', description: 'This property is currently assigned to a tenant.' });
-        return;
-    }
+    // Note: This check is not comprehensive. It only checks tenants currently loaded in the client.
+    // A more robust solution would be a backend check or function.
     removeProperty(propertyId);
     toast({ variant: 'destructive', title: 'Property Removed', description: 'The property has been removed.' });
   };
@@ -83,7 +81,7 @@ export default function PropertiesPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Properties</CardTitle>
-                <CardDescription>Manage your rental properties.</CardDescription>
+                <CardDescription>Manage your rental properties. These are for reference and no longer directly linked to tenants.</CardDescription>
             </CardHeader>
             <CardContent>
                  {loading ? (<p>Loading properties...</p>) : (
@@ -111,7 +109,7 @@ export default function PropertiesPage() {
                                             <AlertDialogHeader>
                                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                This action cannot be undone. You can only remove properties that are not assigned to any tenant.
+                                                This action cannot be undone. This will permanently remove the property.
                                             </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
