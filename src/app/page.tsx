@@ -24,15 +24,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 
 
-const tenantSchema = z.object({
-    name: z.string().min(1, 'Name is required'),
-    rent: z.coerce.number().min(1, 'Rent must be a positive number'),
-    dueDate: z.date({ required_error: "Due date is required."}),
-    whatsappNumber: z.string().optional(),
-    propertyId: z.string().min(1, 'Please select a property'),
+const rentalReceiptSchema = z.object({
+    tenantId: z.string().min(1, 'Please select a tenant'),
+    amount: z.coerce.number().min(1, 'Amount must be a positive number'),
+    paymentDate: z.date({ required_error: "Payment date is required."}),
 });
 
-type TenantFormValues = z.infer<typeof tenantSchema>;
+type RentalReceiptFormValues = z.infer<typeof rentalReceiptSchema>;
 
 type Property = {
   id: string;
@@ -75,8 +73,7 @@ export default function DashboardPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedReceipt, setGeneratedReceipt] = useState<string | null>(null);
-  const [isTenantFormOpen, setIsTenantFormOpen] = useState(false);
-  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const [isRentalReceiptFormOpen, setIsRentalReceiptFormOpen] = useState(false);
   const { toast } = useToast();
 
   const totalIncome = tenants.filter(t => t.status === 'paid').reduce((acc, t) => acc + t.rent, 0);
@@ -84,48 +81,32 @@ export default function DashboardPage() {
 
   const getPropertyForTenant = (tenant: Tenant) => properties.find(p => p.id === tenant.propertyId);
 
-  const tenantForm = useForm<TenantFormValues>({
-    resolver: zodResolver(tenantSchema),
+  const rentalReceiptForm = useForm<RentalReceiptFormValues>({
+    resolver: zodResolver(rentalReceiptSchema),
+    defaultValues: {
+        tenantId: '',
+        amount: 0,
+        paymentDate: new Date(),
+    }
   });
 
-  const openTenantForm = (tenant: Tenant | null) => {
-    setEditingTenant(tenant);
-    if (tenant) {
-        tenantForm.reset({
-            name: tenant.name,
-            rent: tenant.rent,
-            dueDate: tenant.dueDate,
-            whatsappNumber: tenant.whatsappNumber || '',
-            propertyId: tenant.propertyId,
-        });
-    } else {
-        tenantForm.reset({
-            name: '',
-            rent: 0,
-            dueDate: undefined,
-            whatsappNumber: '',
-            propertyId: '',
-        });
+  const handleRentalReceiptFormSubmit = async (data: RentalReceiptFormValues) => {
+    const tenant = tenants.find(t => t.id === data.tenantId);
+    if (!tenant) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Tenant not found.' });
+        return;
     }
-    setIsTenantFormOpen(true);
-  };
+    const updatedTenant = { ...tenant, status: 'paid' as 'paid', rent: data.amount };
+    setTenants(tenants.map(t => t.id === data.tenantId ? updatedTenant : t));
+    
+    toast({
+        title: "Payment Recorded",
+        description: `Rent for ${tenant.name} of $${data.amount} has been recorded.`,
+    });
 
-  const handleTenantFormSubmit = (data: TenantFormValues) => {
-    if (editingTenant) {
-        setTenants(tenants.map(t => t.id === editingTenant.id ? { ...editingTenant, ...data } : t));
-        toast({ title: "Tenant Updated", description: `${data.name}'s details have been updated.` });
-    } else {
-        const newTenant: Tenant = {
-            id: (tenants.length + 1 + Math.random()).toString(),
-            ...data,
-            status: 'pending',
-            avatar: `https://i.pravatar.cc/150?u=${Math.random()}`,
-        };
-        setTenants([...tenants, newTenant]);
-        toast({ title: "Tenant Added", description: `${data.name} has been added to your tenants list.` });
-    }
-    setIsTenantFormOpen(false);
-    setEditingTenant(null);
+    setIsRentalReceiptFormOpen(false);
+    rentalReceiptForm.reset();
+    await generateReceipt(updatedTenant, true, data.paymentDate, data.amount);
   };
 
 
@@ -220,9 +201,11 @@ export default function DashboardPage() {
     setIsUploadDialogOpen(true);
   };
   
-  const generateReceipt = async (tenant: Tenant, openDialog: boolean = false) => {
+  const generateReceipt = async (tenant: Tenant, openDialog: boolean = false, paymentDate?: Date, amount?: number) => {
     const property = getPropertyForTenant(tenant);
     if (!property) return;
+
+    const receiptAmount = amount ?? tenant.rent;
 
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage();
@@ -242,7 +225,7 @@ export default function DashboardPage() {
     page.drawText(`${new Date().getFullYear()}-${String(tenant.id).padStart(4, '0')}`, { x: 50, y: infoY - 15, font: boldFont, size: 12, color: grayColor });
     
     page.drawText('DATE', { x: 200, y: infoY, font, size: 10, color: lightGrayColor });
-    page.drawText(new Date().toLocaleDateString(), { x: 200, y: infoY - 15, font: boldFont, size: 12, color: grayColor });
+    page.drawText((paymentDate ?? new Date()).toLocaleDateString(), { x: 200, y: infoY - 15, font: boldFont, size: 12, color: grayColor });
 
     page.drawLine({
         start: { x: 50, y: infoY - 40 },
@@ -270,7 +253,7 @@ export default function DashboardPage() {
 
     const itemY = tableHeaderY - 30;
     page.drawText(`Monthly Rent - ${property.type === 'shop' ? 'Shop' : 'Apartment'}`, { x: 50, y: itemY, font, size: 12, color: grayColor });
-    page.drawText(`$${tenant.rent.toLocaleString()}`, { x: width - 150, y: itemY, font: boldFont, size: 12, color: grayColor, });
+    page.drawText(`$${receiptAmount.toLocaleString()}`, { x: width - 150, y: itemY, font: boldFont, size: 12, color: grayColor, });
 
     const totalY = itemY - 50;
      page.drawLine({
@@ -280,7 +263,7 @@ export default function DashboardPage() {
         color: rgb(0.9, 0.9, 0.9),
     });
     page.drawText('TOTAL', { x: width - 200, y: totalY - 20, font: boldFont, size: 14, color: grayColor });
-    page.drawText(`$${tenant.rent.toLocaleString()}`, { x: width - 150, y: totalY - 20, font: boldFont, size: 14, color: primaryColor });
+    page.drawText(`$${receiptAmount.toLocaleString()}`, { x: width - 150, y: totalY - 20, font: boldFont, size: 14, color: primaryColor });
 
     if (tenant.status === 'paid') {
       page.drawText('Thank you for your payment!', { x: 50, y: 80, font, size: 14, color: grayColor });
@@ -371,9 +354,9 @@ export default function DashboardPage() {
                     <CardTitle>Tenant Payments</CardTitle>
                     <CardDescription>Manage your tenant payments and receipts.</CardDescription>
                 </div>
-                <Button onClick={() => openTenantForm(null)}>
+                <Button onClick={() => setIsRentalReceiptFormOpen(true)}>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Tenant
+                    Rental Receipt
                 </Button>
             </CardHeader>
             <CardContent>
@@ -504,47 +487,42 @@ export default function DashboardPage() {
             </DialogContent>
         </Dialog>
 
-        <Dialog open={isTenantFormOpen} onOpenChange={setIsTenantFormOpen}>
+        <Dialog open={isRentalReceiptFormOpen} onOpenChange={setIsRentalReceiptFormOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</DialogTitle>
+                    <DialogTitle>Generate Rental Receipt</DialogTitle>
+                    <DialogDescription>Select a tenant and enter payment details to generate a new receipt.</DialogDescription>
                 </DialogHeader>
-                <form onSubmit={tenantForm.handleSubmit(handleTenantFormSubmit)} className="grid gap-4 py-4">
+                <form onSubmit={rentalReceiptForm.handleSubmit(handleRentalReceiptFormSubmit)} className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="name">Tenant Name</Label>
-                        <Input id="name" {...tenantForm.register('name')} />
-                        {tenantForm.formState.errors.name && <p className="text-red-500 text-xs">{tenantForm.formState.errors.name.message}</p>}
-                    </div>
-                    
-                    <div className="grid gap-2">
-                        <Label>Property</Label>
+                        <Label>Tenant</Label>
                         <Controller
-                            control={tenantForm.control}
-                            name="propertyId"
+                            control={rentalReceiptForm.control}
+                            name="tenantId"
                             render={({ field }) => (
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select a property" />
+                                        <SelectValue placeholder="Select a tenant" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                        {tenants.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             )}
                         />
-                         {tenantForm.formState.errors.propertyId && <p className="text-red-500 text-xs">{tenantForm.formState.errors.propertyId.message}</p>}
+                         {rentalReceiptForm.formState.errors.tenantId && <p className="text-red-500 text-xs">{rentalReceiptForm.formState.errors.tenantId.message}</p>}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                          <div className="grid gap-2">
-                            <Label htmlFor="rent">Rent Amount ($)</Label>
-                            <Input id="rent" type="number" {...tenantForm.register('rent')} />
-                            {tenantForm.formState.errors.rent && <p className="text-red-500 text-xs">{tenantForm.formState.errors.rent.message}</p>}
+                            <Label htmlFor="amount">Payment Amount ($)</Label>
+                            <Input id="amount" type="number" {...rentalReceiptForm.register('amount')} />
+                            {rentalReceiptForm.formState.errors.amount && <p className="text-red-500 text-xs">{rentalReceiptForm.formState.errors.amount.message}</p>}
                         </div>
                         <div className="grid gap-2">
-                           <Label htmlFor="dueDate">Due Date</Label>
+                           <Label htmlFor="paymentDate">Payment Date</Label>
                             <Controller
-                                control={tenantForm.control}
-                                name="dueDate"
+                                control={rentalReceiptForm.control}
+                                name="paymentDate"
                                 render={({ field }) => (
                                     <Popover>
                                         <PopoverTrigger asChild>
@@ -570,18 +548,14 @@ export default function DashboardPage() {
                                     </Popover>
                                 )}
                             />
-                            {tenantForm.formState.errors.dueDate && <p className="text-red-500 text-xs">{tenantForm.formState.errors.dueDate.message}</p>}
+                            {rentalReceiptForm.formState.errors.paymentDate && <p className="text-red-500 text-xs">{rentalReceiptForm.formState.errors.paymentDate.message}</p>}
                         </div>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="whatsappNumber">WhatsApp Number (Optional)</Label>
-                        <Input id="whatsappNumber" {...tenantForm.register('whatsappNumber')} />
                     </div>
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button type="button" variant="outline">Cancel</Button>
                         </DialogClose>
-                        <Button type="submit">{editingTenant ? 'Save Changes' : 'Add Tenant'}</Button>
+                        <Button type="submit">Generate Receipt</Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
@@ -589,5 +563,3 @@ export default function DashboardPage() {
     </main>
   );
 }
-
-    
