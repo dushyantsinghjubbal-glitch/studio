@@ -31,7 +31,7 @@ const RecognizeTenantPaymentOutputSchema = z.object({
 });
 export type RecognizeTenantPaymentOutput = z.infer<typeof RecognizeTenantPaymentOutputSchema>;
 
-export async function recognizeTenantPayment(input: RecognizeTenantPaymentInput): Promise<RecognicateTenantPaymentOutput> {
+export async function recognizeTenantPayment(input: RecognizeTenantPaymentInput): Promise<RecognizeTenantPaymentOutput> {
   return recognizeTenantPaymentFlow(input);
 }
 

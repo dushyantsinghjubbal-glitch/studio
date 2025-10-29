@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { DollarSign, Users, Clock, MoreVertical, Upload, CheckCircle2, XCircle, Home as HomeIcon, FileText, Share2, PlusCircle, Trash2, Edit } from 'lucide-react';
+import { DollarSign, Users, Clock, MoreVertical, Upload, CheckCircle2, XCircle, Home as HomeIcon, FileText, Share2, PlusCircle, Trash2, Edit, Building, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -19,19 +19,30 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Store } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 const tenantSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     rent: z.coerce.number().min(1, 'Rent must be a positive number'),
     dueDate: z.string().min(1, 'Due date is required'),
     whatsappNumber: z.string().optional(),
-    propertyType: z.enum(['apartment', 'shop']),
-    propertyName: z.string().min(1, 'Property name is required'),
+    propertyId: z.string().min(1, 'Please select a property'),
+});
+
+const propertySchema = z.object({
+    name: z.string().min(1, 'Property name is required'),
+    type: z.enum(['apartment', 'shop']),
 });
 
 type TenantFormValues = z.infer<typeof tenantSchema>;
+type PropertyFormValues = z.infer<typeof propertySchema>;
 
+type Property = {
+  id: string;
+  name: string;
+  type: 'apartment' | 'shop';
+};
 
 type Tenant = {
   id: string;
@@ -41,23 +52,32 @@ type Tenant = {
   status: 'paid' | 'pending';
   dueDate: string;
   whatsappNumber?: string;
-  propertyType: 'apartment' | 'shop';
-  propertyName: string;
+  propertyId: string;
 };
 
-const initialTenants: Tenant[] = [
-  { id: '1', name: 'John Doe', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d', rent: 1200, status: 'paid', dueDate: '1st May 2024', whatsappNumber: '1234567890', propertyType: 'apartment', propertyName: 'Apt 101, Sunrise Building' },
-  { id: '2', name: 'Jane Smith', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', rent: 950, status: 'pending', dueDate: '5th May 2024', whatsappNumber: '0987654321', propertyType: 'shop', propertyName: 'Groceries R Us' },
-  { id: '3', name: 'Sam Wilson', avatar: 'https://i.pravatar.cc/150?u=a04258114e29026702d', rent: 1500, status: 'paid', dueDate: '3rd May 2024', propertyType: 'apartment', propertyName: 'Apt 202, Sunrise Building' },
-  { id: '4', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', rent: 1100, status: 'pending', dueDate: '10th May 2024', whatsappNumber: '1122334455', propertyType: 'shop', propertyName: 'The Corner Bookstore' },
+const initialProperties: Property[] = [
+    { id: '1', name: 'Apt 101, Sunrise Building', type: 'apartment' },
+    { id: '2', name: 'Groceries R Us', type: 'shop' },
+    { id: '3', name: 'Apt 202, Sunrise Building', type: 'apartment' },
+    { id: '4', name: 'The Corner Bookstore', type: 'shop' },
 ];
 
-export default function Home() {
+const initialTenants: Tenant[] = [
+  { id: '1', name: 'John Doe', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d', rent: 1200, status: 'paid', dueDate: '1st May 2024', whatsappNumber: '1234567890', propertyId: '1' },
+  { id: '2', name: 'Jane Smith', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', rent: 950, status: 'pending', dueDate: '5th May 2024', whatsappNumber: '0987654321', propertyId: '2' },
+  { id: '3', name: 'Sam Wilson', avatar: 'https://i.pravatar.cc/150?u=a04258114e29026702d', rent: 1500, status: 'paid', dueDate: '3rd May 2024', propertyId: '3' },
+  { id: '4', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', rent: 1100, status: 'pending', dueDate: '10th May 2024', whatsappNumber: '1122334455', propertyId: '4' },
+];
+
+export default function RentManagementPage() {
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
+  const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
   const [isTenantFormOpen, setIsTenantFormOpen] = useState(false);
+  const [isPropertyFormOpen, setIsPropertyFormOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -65,12 +85,19 @@ export default function Home() {
   const [generatedReceipt, setGeneratedReceipt] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<TenantFormValues>({
+  const tenantForm = useForm<TenantFormValues>({
     resolver: zodResolver(tenantSchema),
+  });
+  
+  const propertyForm = useForm<PropertyFormValues>({
+    resolver: zodResolver(propertySchema),
+    defaultValues: { type: 'apartment' }
   });
 
   const totalIncome = tenants.filter(t => t.status === 'paid').reduce((acc, t) => acc + t.rent, 0);
   const pendingRent = tenants.filter(t => t.status === 'pending').reduce((acc, t) => acc + t.rent, 0);
+
+  const getPropertyForTenant = (tenant: Tenant) => properties.find(p => p.id === tenant.propertyId);
 
   const handleFileSelect = (file: File | null) => {
     setSelectedFile(file);
@@ -150,36 +177,48 @@ export default function Home() {
   const openTenantForm = (tenant: Tenant | null) => {
     setEditingTenant(tenant);
     if (tenant) {
-        reset({
+        tenantForm.reset({
             name: tenant.name,
             rent: tenant.rent,
             dueDate: tenant.dueDate,
             whatsappNumber: tenant.whatsappNumber || '',
-            propertyType: tenant.propertyType,
-            propertyName: tenant.propertyName,
+            propertyId: tenant.propertyId,
         });
     } else {
-        reset({
+        tenantForm.reset({
             name: '',
             rent: 0,
             dueDate: '',
             whatsappNumber: '',
-            propertyType: 'apartment',
-            propertyName: '',
+            propertyId: '',
         });
     }
     setIsTenantFormOpen(true);
   };
 
+  const openPropertyForm = (property: Property | null) => {
+    setEditingProperty(property);
+    if(property) {
+        propertyForm.reset({
+            name: property.name,
+            type: property.type,
+        });
+    } else {
+        propertyForm.reset({
+            name: '',
+            type: 'apartment',
+        });
+    }
+    setIsPropertyFormOpen(true);
+  };
+
   const handleTenantFormSubmit = (data: TenantFormValues) => {
     if (editingTenant) {
-        // Edit existing tenant
         setTenants(tenants.map(t => t.id === editingTenant.id ? { ...editingTenant, ...data } : t));
         toast({ title: "Tenant Updated", description: `${data.name}'s details have been updated.` });
     } else {
-        // Add new tenant
         const newTenant: Tenant = {
-            id: (tenants.length + 1).toString(),
+            id: (tenants.length + 1 + Math.random()).toString(),
             ...data,
             status: 'pending',
             avatar: `https://i.pravatar.cc/150?u=${Math.random()}`,
@@ -191,13 +230,42 @@ export default function Home() {
     setEditingTenant(null);
   };
 
+  const handlePropertyFormSubmit = (data: PropertyFormValues) => {
+      if (editingProperty) {
+          setProperties(properties.map(p => p.id === editingProperty.id ? { ...editingProperty, ...data } : p));
+          toast({ title: "Property Updated", description: `${data.name} has been updated.` });
+      } else {
+          const newProperty: Property = {
+              id: (properties.length + 1 + Math.random()).toString(),
+              name: data.name,
+              type: data.type
+          };
+          setProperties([...properties, newProperty]);
+          toast({ title: "Property Added", description: `${data.name} has been added.` });
+      }
+      setIsPropertyFormOpen(false);
+      setEditingProperty(null);
+  };
+
   const handleRemoveTenant = (tenantId: string) => {
     setTenants(tenants.filter(t => t.id !== tenantId));
     toast({ variant: 'destructive', title: 'Tenant Removed', description: 'The tenant has been removed from your list.' });
   };
+  
+  const handleRemoveProperty = (propertyId: string) => {
+    if (tenants.some(t => t.propertyId === propertyId)) {
+        toast({ variant: 'destructive', title: 'Cannot Remove Property', description: 'This property is currently assigned to a tenant.' });
+        return;
+    }
+    setProperties(properties.filter(p => p.id !== propertyId));
+    toast({ variant: 'destructive', title: 'Property Removed', description: 'The property has been removed.' });
+  };
 
 
   const generateReceipt = async (tenant: Tenant, openDialog: boolean = false) => {
+    const property = getPropertyForTenant(tenant);
+    if (!property) return;
+
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage();
     const { width, height } = page.getSize();
@@ -228,7 +296,7 @@ export default function Home() {
     const billedToY = infoY - 70;
     page.drawText('BILLED TO', { x: 50, y: billedToY, font, size: 10, color: lightGrayColor });
     page.drawText(tenant.name, { x: 50, y: billedToY - 15, font: boldFont, size: 14, color: grayColor });
-    page.drawText(tenant.propertyName, { x: 50, y: billedToY - 30, font, size: 12, color: grayColor });
+    page.drawText(property.name, { x: 50, y: billedToY - 30, font, size: 12, color: grayColor });
 
     const tableY = billedToY - 80;
     const tableHeaderY = tableY;
@@ -243,7 +311,7 @@ export default function Home() {
     });
 
     const itemY = tableHeaderY - 30;
-    page.drawText(`Monthly Rent - ${tenant.propertyType === 'shop' ? 'Shop' : 'Apartment'}`, { x: 50, y: itemY, font, size: 12, color: grayColor });
+    page.drawText(`Monthly Rent - ${property.type === 'shop' ? 'Shop' : 'Apartment'}`, { x: 50, y: itemY, font, size: 12, color: grayColor });
     page.drawText(`$${tenant.rent.toLocaleString()}`, { x: width - 150, y: itemY, font: boldFont, size: 12, color: grayColor, });
 
     const totalY = itemY - 50;
@@ -318,7 +386,11 @@ export default function Home() {
                 <HomeIcon className="h-6 w-6 text-primary" />
                 <h1 className="text-2xl font-bold tracking-tight">RentBox</h1>
             </div>
-             <div className="ml-auto">
+             <div className="ml-auto flex items-center gap-2">
+                <Button onClick={() => openPropertyForm(null)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Property
+                </Button>
                 <Button onClick={() => openTenantForm(null)}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Tenant
@@ -349,108 +421,169 @@ export default function Home() {
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Properties</CardTitle>
+                        <CardTitle className="text-sm font-medium">Total Active Rentals</CardTitle>
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{tenants.length}</div>
-                        <p className="text-xs text-muted-foreground">Total active tenants/properties</p>
+                        <p className="text-xs text-muted-foreground">Total active tenants</p>
                     </CardContent>
                 </Card>
             </div>
-            <div>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Tenants & Properties</CardTitle>
-                        <CardDescription>Manage your tenants and their rent payments.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="divide-y divide-border">
-                            {tenants.map((tenant) => (
-                                <div key={tenant.id} className="flex items-center justify-between py-3">
-                                    <div className="flex items-center gap-4">
-                                        <Avatar className="h-12 w-12">
-                                            <AvatarImage src={tenant.avatar} />
-                                            <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="font-medium">{tenant.name}</p>
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                {tenant.propertyType === 'apartment' ? <Building className="h-4 w-4" /> : <Store className="h-4 w-4" />}
-                                                <span>{tenant.propertyName}</span>
+            
+            <Tabs defaultValue="tenants">
+                <TabsList>
+                    <TabsTrigger value="tenants">Tenants</TabsTrigger>
+                    <TabsTrigger value="properties">Properties</TabsTrigger>
+                </TabsList>
+                <TabsContent value="tenants">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Tenants</CardTitle>
+                            <CardDescription>Manage your tenants and their rent payments.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="divide-y divide-border">
+                                {tenants.map((tenant) => {
+                                    const property = getPropertyForTenant(tenant);
+                                    return (
+                                        <div key={tenant.id} className="flex items-center justify-between py-3">
+                                            <div className="flex items-center gap-4">
+                                                <Avatar className="h-12 w-12">
+                                                    <AvatarImage src={tenant.avatar} />
+                                                    <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <p className="font-medium">{tenant.name}</p>
+                                                    {property && (
+                                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                            {property.type === 'apartment' ? <Building className="h-4 w-4" /> : <Store className="h-4 w-4" />}
+                                                            <span>{property.name}</span>
+                                                        </div>
+                                                    )}
+                                                    <p className="text-sm text-muted-foreground">Due on: {tenant.dueDate}</p>
+                                                </div>
                                             </div>
-                                            <p className="text-sm text-muted-foreground">Due on: {tenant.dueDate}</p>
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-right">
+                                                   <p className="font-semibold text-lg">${tenant.rent.toLocaleString()}</p>
+                                                    <Badge variant={tenant.status === 'paid' ? 'default' : 'destructive'} className={tenant.status === 'paid' ? 'bg-green-500/80 hover:bg-green-500/90' : ''}>
+                                                        {tenant.status === 'paid' ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
+                                                        {tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)}
+                                                    </Badge>
+                                                </div>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        {tenant.status === 'pending' && (
+                                                            <DropdownMenuItem onClick={() => openUploadDialog(tenant)}>
+                                                                <Upload className="mr-2 h-4 w-4" />
+                                                                <span>Upload Payment</span>
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        {tenant.status === 'paid' && (
+                                                            <>
+                                                                <DropdownMenuItem onClick={() => generateReceipt(tenant, true)}>
+                                                                    <FileText className="mr-2 h-4 w-4" />
+                                                                    <span>View Receipt</span>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleShare(tenant)}>
+                                                                    <Share2 className="mr-2 h-4 w-4" />
+                                                                    <span>Share Receipt</span>
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onClick={() => openTenantForm(tenant)}>
+                                                            <Edit className="mr-2 h-4 w-4" />
+                                                            <span>Edit Tenant</span>
+                                                        </DropdownMenuItem>
+                                                         <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                    <Trash2 className="mr-2 h-4 w-4 text-red-500" />
+                                                                    <span className="text-red-500">Remove Tenant</span>
+                                                                </DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    This action cannot be undone. This will permanently remove {tenant.name} and all their data.
+                                                                </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleRemoveTenant(tenant.id)} className="bg-red-600 hover:bg-red-700">
+                                                                    Yes, remove tenant
+                                                                </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="properties">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Properties</CardTitle>
+                            <CardDescription>Manage your rental properties.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="divide-y divide-border">
+                                {properties.map((property) => (
+                                    <div key={property.id} className="flex items-center justify-between py-3">
+                                        <div className="flex items-center gap-4">
+                                            {property.type === 'apartment' ? <Building className="h-8 w-8 text-muted-foreground" /> : <Store className="h-8 w-8 text-muted-foreground" />}
+                                            <div>
+                                                <p className="font-medium">{property.name}</p>
+                                                <p className="text-sm text-muted-foreground">{property.type.charAt(0).toUpperCase() + property.type.slice(1)}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="outline" size="sm" onClick={() => openPropertyForm(property)}>
+                                                <Edit className="mr-2 h-3 w-3" /> Edit
+                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="destructive" size="sm">
+                                                        <Trash2 className="mr-2 h-3 w-3" /> Remove
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action cannot be undone. You can only remove properties that are not assigned to any tenant.
+                                                    </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleRemoveProperty(property.id)} className="bg-red-600 hover:bg-red-700">
+                                                        Yes, remove property
+                                                    </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-right">
-                                           <p className="font-semibold text-lg">${tenant.rent.toLocaleString()}</p>
-                                            <Badge variant={tenant.status === 'paid' ? 'default' : 'destructive'} className={tenant.status === 'paid' ? 'bg-green-500/80 hover:bg-green-500/90' : ''}>
-                                                {tenant.status === 'paid' ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
-                                                {tenant.status.charAt(0).toUpperCase() + tenant.status.slice(1)}
-                                            </Badge>
-                                        </div>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                {tenant.status === 'pending' && (
-                                                    <DropdownMenuItem onClick={() => openUploadDialog(tenant)}>
-                                                        <Upload className="mr-2 h-4 w-4" />
-                                                        <span>Upload Payment</span>
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {tenant.status === 'paid' && (
-                                                    <>
-                                                        <DropdownMenuItem onClick={() => generateReceipt(tenant, true)}>
-                                                            <FileText className="mr-2 h-4 w-4" />
-                                                            <span>View Receipt</span>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleShare(tenant)}>
-                                                            <Share2 className="mr-2 h-4 w-4" />
-                                                            <span>Share Receipt</span>
-                                                        </DropdownMenuItem>
-                                                    </>
-                                                )}
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => openTenantForm(tenant)}>
-                                                    <Edit className="mr-2 h-4 w-4" />
-                                                    <span>Edit</span>
-                                                </DropdownMenuItem>
-                                                 <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                            <Trash2 className="mr-2 h-4 w-4 text-red-500" />
-                                                            <span className="text-red-500">Remove Tenant</span>
-                                                        </DropdownMenuItem>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This action cannot be undone. This will permanently remove {tenant.name} and all their data.
-                                                        </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleRemoveTenant(tenant.id)} className="bg-red-600 hover:bg-red-700">
-                                                            Yes, remove tenant
-                                                        </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </main>
         
         {/* Tenant Add/Edit Dialog */}
@@ -459,22 +592,74 @@ export default function Home() {
                 <DialogHeader>
                     <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit(handleTenantFormSubmit)} className="grid gap-4 py-4">
+                <form onSubmit={tenantForm.handleSubmit(handleTenantFormSubmit)} className="grid gap-4 py-4">
                     <div className="grid gap-2">
                         <Label htmlFor="name">Tenant Name</Label>
-                        <Input id="name" {...register('name')} />
-                        {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
+                        <Input id="name" {...tenantForm.register('name')} />
+                        {tenantForm.formState.errors.name && <p className="text-red-500 text-xs">{tenantForm.formState.errors.name.message}</p>}
+                    </div>
+                    
+                    <div className="grid gap-2">
+                        <Label>Property</Label>
+                        <Controller
+                            control={tenantForm.control}
+                            name="propertyId"
+                            render={({ field }) => (
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a property" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                         {tenantForm.formState.errors.propertyId && <p className="text-red-500 text-xs">{tenantForm.formState.errors.propertyId.message}</p>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                         <div className="grid gap-2">
+                            <Label htmlFor="rent">Rent Amount ($)</Label>
+                            <Input id="rent" type="number" {...tenantForm.register('rent')} />
+                            {tenantForm.formState.errors.rent && <p className="text-red-500 text-xs">{tenantForm.formState.errors.rent.message}</p>}
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="dueDate">Due Date</Label>
+                            <Input id="dueDate" {...tenantForm.register('dueDate')} placeholder="e.g., 1st June 2024" />
+                            {tenantForm.formState.errors.dueDate && <p className="text-red-500 text-xs">{tenantForm.formState.errors.dueDate.message}</p>}
+                        </div>
                     </div>
                     <div className="grid gap-2">
+                        <Label htmlFor="whatsappNumber">WhatsApp Number (Optional)</Label>
+                        <Input id="whatsappNumber" {...tenantForm.register('whatsappNumber')} />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit">{editingTenant ? 'Save Changes' : 'Add Tenant'}</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+        
+         {/* Property Add/Edit Dialog */}
+        <Dialog open={isPropertyFormOpen} onOpenChange={setIsPropertyFormOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{editingProperty ? 'Edit Property' : 'Add New Property'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={propertyForm.handleSubmit(handlePropertyFormSubmit)} className="grid gap-4 py-4">
+                    <div className="grid gap-2">
                         <Label htmlFor="propertyName">Property Name / Address</Label>
-                        <Input id="propertyName" {...register('propertyName')} />
-                        {errors.propertyName && <p className="text-red-500 text-xs">{errors.propertyName.message}</p>}
+                        <Input id="propertyName" {...propertyForm.register('name')} />
+                        {propertyForm.formState.errors.name && <p className="text-red-500 text-xs">{propertyForm.formState.errors.name.message}</p>}
                     </div>
                      <div className="grid gap-2">
                         <Label>Property Type</Label>
                         <Controller
-                            control={control}
-                            name="propertyType"
+                            control={propertyForm.control}
+                            name="type"
                             render={({ field }) => (
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <SelectTrigger>
@@ -487,29 +672,13 @@ export default function Home() {
                                 </Select>
                             )}
                         />
-                         {errors.propertyType && <p className="text-red-500 text-xs">{errors.propertyType.message}</p>}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                         <div className="grid gap-2">
-                            <Label htmlFor="rent">Rent Amount ($)</Label>
-                            <Input id="rent" type="number" {...register('rent')} />
-                            {errors.rent && <p className="text-red-500 text-xs">{errors.rent.message}</p>}
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="dueDate">Due Date</Label>
-                            <Input id="dueDate" {...register('dueDate')} />
-                            {errors.dueDate && <p className="text-red-500 text-xs">{errors.dueDate.message}</p>}
-                        </div>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="whatsappNumber">WhatsApp Number (Optional)</Label>
-                        <Input id="whatsappNumber" {...register('whatsappNumber')} />
+                         {propertyForm.formState.errors.type && <p className="text-red-500 text-xs">{propertyForm.formState.errors.type.message}</p>}
                     </div>
                     <DialogFooter>
                         <DialogClose asChild>
                             <Button type="button" variant="outline">Cancel</Button>
                         </DialogClose>
-                        <Button type="submit">{editingTenant ? 'Save Changes' : 'Add Tenant'}</Button>
+                        <Button type="submit">{editingProperty ? 'Save Changes' : 'Add Property'}</Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
@@ -576,5 +745,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
