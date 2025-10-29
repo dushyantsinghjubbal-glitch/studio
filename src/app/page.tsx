@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MoreVertical, Upload, CheckCircle2, XCircle, FileText, Share2, Building, Store, DollarSign, Users, Clock } from 'lucide-react';
+import { MoreVertical, Upload, CheckCircle2, XCircle, FileText, Share2, Building, Store, DollarSign, Users, Clock, PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -15,7 +15,24 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { recognizeTenantPayment, type RecognizeTenantPaymentInput } from '@/ai/flows/recognize-tenant-payment';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { Separator } from '@/components/ui/separator';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+
+
+const tenantSchema = z.object({
+    name: z.string().min(1, 'Name is required'),
+    rent: z.coerce.number().min(1, 'Rent must be a positive number'),
+    dueDate: z.date({ required_error: "Due date is required."}),
+    whatsappNumber: z.string().optional(),
+    propertyId: z.string().min(1, 'Please select a property'),
+});
+
+type TenantFormValues = z.infer<typeof tenantSchema>;
 
 type Property = {
   id: string;
@@ -58,12 +75,59 @@ export default function DashboardPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedReceipt, setGeneratedReceipt] = useState<string | null>(null);
+  const [isTenantFormOpen, setIsTenantFormOpen] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const { toast } = useToast();
 
   const totalIncome = tenants.filter(t => t.status === 'paid').reduce((acc, t) => acc + t.rent, 0);
   const pendingRent = tenants.filter(t => t.status === 'pending').reduce((acc, t) => acc + t.rent, 0);
 
   const getPropertyForTenant = (tenant: Tenant) => properties.find(p => p.id === tenant.propertyId);
+
+  const tenantForm = useForm<TenantFormValues>({
+    resolver: zodResolver(tenantSchema),
+  });
+
+  const openTenantForm = (tenant: Tenant | null) => {
+    setEditingTenant(tenant);
+    if (tenant) {
+        tenantForm.reset({
+            name: tenant.name,
+            rent: tenant.rent,
+            dueDate: tenant.dueDate,
+            whatsappNumber: tenant.whatsappNumber || '',
+            propertyId: tenant.propertyId,
+        });
+    } else {
+        tenantForm.reset({
+            name: '',
+            rent: 0,
+            dueDate: undefined,
+            whatsappNumber: '',
+            propertyId: '',
+        });
+    }
+    setIsTenantFormOpen(true);
+  };
+
+  const handleTenantFormSubmit = (data: TenantFormValues) => {
+    if (editingTenant) {
+        setTenants(tenants.map(t => t.id === editingTenant.id ? { ...editingTenant, ...data } : t));
+        toast({ title: "Tenant Updated", description: `${data.name}'s details have been updated.` });
+    } else {
+        const newTenant: Tenant = {
+            id: (tenants.length + 1 + Math.random()).toString(),
+            ...data,
+            status: 'pending',
+            avatar: `https://i.pravatar.cc/150?u=${Math.random()}`,
+        };
+        setTenants([...tenants, newTenant]);
+        toast({ title: "Tenant Added", description: `${data.name} has been added to your tenants list.` });
+    }
+    setIsTenantFormOpen(false);
+    setEditingTenant(null);
+  };
+
 
   const handleFileSelect = (file: File | null) => {
     setSelectedFile(file);
@@ -302,9 +366,15 @@ export default function DashboardPage() {
         </div>
         
         <Card>
-            <CardHeader>
-                <CardTitle>Tenant Payments</CardTitle>
-                <CardDescription>Manage your tenant payments and receipts.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Tenant Payments</CardTitle>
+                    <CardDescription>Manage your tenant payments and receipts.</CardDescription>
+                </div>
+                <Button onClick={() => openTenantForm(null)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Tenant
+                </Button>
             </CardHeader>
             <CardContent>
                 <div className="divide-y divide-border">
@@ -386,7 +456,7 @@ export default function DashboardPage() {
                         </div>
                     )}
                 </div>
-                 <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between items-center pt-4 border-t gap-2">
+                 <DialogFooter className="flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-between">
                     <Button variant="secondary" onClick={handleManualPayment}>
                        <CheckCircle2 className="mr-2 h-4 w-4" /> Mark as Paid Manually
                     </Button>
@@ -420,7 +490,7 @@ export default function DashboardPage() {
                 <div className="h-[600px] w-full overflow-hidden rounded-md border">
                     {generatedReceipt && <iframe src={generatedReceipt} className="h-full w-full" title="Receipt" />}
                 </div>
-                 <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end sm:gap-2 pt-4">
+                 <DialogFooter className="flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end">
                     <DialogClose asChild>
                         <Button variant="outline">Close</Button>
                     </DialogClose>
@@ -433,6 +503,91 @@ export default function DashboardPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        <Dialog open={isTenantFormOpen} onOpenChange={setIsTenantFormOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={tenantForm.handleSubmit(handleTenantFormSubmit)} className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Tenant Name</Label>
+                        <Input id="name" {...tenantForm.register('name')} />
+                        {tenantForm.formState.errors.name && <p className="text-red-500 text-xs">{tenantForm.formState.errors.name.message}</p>}
+                    </div>
+                    
+                    <div className="grid gap-2">
+                        <Label>Property</Label>
+                        <Controller
+                            control={tenantForm.control}
+                            name="propertyId"
+                            render={({ field }) => (
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a property" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                         {tenantForm.formState.errors.propertyId && <p className="text-red-500 text-xs">{tenantForm.formState.errors.propertyId.message}</p>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                         <div className="grid gap-2">
+                            <Label htmlFor="rent">Rent Amount ($)</Label>
+                            <Input id="rent" type="number" {...tenantForm.register('rent')} />
+                            {tenantForm.formState.errors.rent && <p className="text-red-500 text-xs">{tenantForm.formState.errors.rent.message}</p>}
+                        </div>
+                        <div className="grid gap-2">
+                           <Label htmlFor="dueDate">Due Date</Label>
+                            <Controller
+                                control={tenantForm.control}
+                                name="dueDate"
+                                render={({ field }) => (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "w-full justify-start text-left font-normal",
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={field.onChange}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                )}
+                            />
+                            {tenantForm.formState.errors.dueDate && <p className="text-red-500 text-xs">{tenantForm.formState.errors.dueDate.message}</p>}
+                        </div>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="whatsappNumber">WhatsApp Number (Optional)</Label>
+                        <Input id="whatsappNumber" {...tenantForm.register('whatsappNumber')} />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit">{editingTenant ? 'Save Changes' : 'Add Tenant'}</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     </main>
   );
 }
+
+    
