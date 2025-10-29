@@ -4,30 +4,89 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Property",
       "type": "object",
-      "description": "Represents a rental property.",
+      "description": "Represents a rental property with detailed information.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the property."
+          "description": "Auto-generated unique identifier for the property."
         },
         "name": {
           "type": "string",
-          "description": "The name or address of the property."
+          "description": "Identifying title, like “Shop 2”, “Flat A-3”."
         },
         "type": {
           "type": "string",
-          "description": "The type of property.",
-          "enum": [
-            "apartment",
-            "shop"
-          ]
+          "description": "Type of unit.",
+          "enum": ["shop", "flat", "land", "office"]
+        },
+        "category": {
+            "type": "string",
+            "description": "Residential, Commercial, or Agricultural",
+            "enum": ["residential", "commercial", "agricultural"]
+        },
+        "areaSize": {
+            "type": "string",
+            "description": "Example: '450 sq ft', '1 kanal'"
+        },
+        "address": {
+          "type": "string",
+          "description": "Complete postal address."
+        },
+        "landmark": {
+          "type": "string",
+          "description": "Helps locate it (e.g., near main bus stand)."
+        },
+        "pinCode": {
+          "type": "string",
+          "description": "For local mapping & search."
+        },
+        "rentAmount": {
+          "type": "number",
+          "description": "Standard rent set for this property."
+        },
+        "depositAmount": {
+          "type": "number",
+          "description": "Security deposit."
+        },
+        "maintenanceCharge": {
+          "type": "number",
+          "description": "Optional, per month."
+        },
+        "rentDueDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Rent due day each month."
+        },
+        "currentTenantId": {
+          "type": "string",
+          "description": "Link to tenants collection."
+        },
+        "occupancyStatus": {
+          "type": "string",
+          "description": "Occupancy status.",
+          "enum": ["vacant", "occupied", "reserved"]
+        },
+        "availabilityDate": {
+          "type": "string",
+          "format": "date",
+          "description": "When next available."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Extra remarks (e.g., 'needs repaint before next tenant')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of creation.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of last update.",
+          "format": "date-time"
         }
       },
-      "required": [
-        "id",
-        "name",
-        "type"
-      ]
+      "required": ["id", "name", "type", "category", "address", "rentAmount", "occupancyStatus", "createdAt", "updatedAt"]
     },
     "Tenant": {
       "$schema": "http://json-schema.org/draft-07/schema#",

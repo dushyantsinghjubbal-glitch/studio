@@ -1,14 +1,29 @@
 'use client';
 
-import React, { createContext, useState, ReactNode, Dispatch, SetStateAction, useEffect } from 'react';
+import React, { createContext, ReactNode, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export type Property = {
-  id: string;
-  name: string;
-  type: 'apartment' | 'shop';
+    id: string;
+    name: string;
+    type: 'shop' | 'flat' | 'land' | 'office';
+    category: 'residential' | 'commercial' | 'agricultural';
+    areaSize?: string;
+    address: string;
+    landmark?: string;
+    pinCode?: string;
+    rentAmount: number;
+    depositAmount?: number;
+    maintenanceCharge?: number;
+    rentDueDate?: Date;
+    currentTenantId?: string;
+    occupancyStatus: 'vacant' | 'occupied' | 'reserved';
+    availabilityDate?: Date;
+    notes?: string;
+    createdAt: string;
+    updatedAt: string;
 };
 
 export type Tenant = {
@@ -34,15 +49,23 @@ export type Tenant = {
 
 // Firestore converters
 const propertyConverter = {
-    toFirestore: (property: Property) => {
+    toFirestore: (property: Omit<Property, 'id'>) => {
         return {
-            name: property.name,
-            type: property.type,
+            ...property,
+            createdAt: property.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
         };
     },
-    fromFirestore: (snapshot: any, options: any) => {
+    fromFirestore: (snapshot: any, options: any): Property => {
         const data = snapshot.data(options);
-        return { id: snapshot.id, ...data } as Property;
+        return {
+            id: snapshot.id,
+            ...data,
+            rentDueDate: data.rentDueDate?.toDate ? data.rentDueDate.toDate() : (data.rentDueDate ? new Date(data.rentDueDate) : undefined),
+            availabilityDate: data.availabilityDate?.toDate ? data.availabilityDate.toDate() : (data.availabilityDate ? new Date(data.availabilityDate) : undefined),
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+        } as Property;
     }
 };
 
@@ -57,8 +80,8 @@ const tenantConverter = {
     },
     fromFirestore: (snapshot: any, options: any): Tenant => {
         const data = snapshot.data(options);
-        return { 
-            id: snapshot.id, 
+        return {
+            id: snapshot.id,
             ...data,
             dueDate: data.dueDate.toDate ? data.dueDate.toDate() : new Date(data.dueDate),
             createdAt: data.createdAt,
@@ -74,7 +97,7 @@ interface AppDataContextProps {
     updateTenant: (tenant: Tenant) => Promise<void>;
     removeTenant: (tenantId: string) => Promise<void>;
     properties: Property[];
-    addProperty: (property: Omit<Property, 'id'>) => Promise<void>;
+    addProperty: (property: Omit<Property, 'id' | 'createdAt' | 'updatedAt' >) => Promise<void>;
     updateProperty: (property: Property) => Promise<void>;
     removeProperty: (propertyId: string) => Promise<void>;
     loading: boolean;
@@ -127,16 +150,22 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         deleteDocumentNonBlocking(tenantRef);
     };
 
-    const addProperty = async (propertyData: Omit<Property, 'id'>) => {
+    const addProperty = async (propertyData: Omit<Property, 'id' | 'createdAt' | 'updatedAt'>) => {
         const newId = doc(collection(firestore, 'properties')).id;
-        const newProperty: Property = { id: newId, ...propertyData };
+        const now = new Date().toISOString();
+        const newProperty: Property = {
+            id: newId,
+            ...propertyData,
+            createdAt: now,
+            updatedAt: now,
+        };
         const propertyRef = doc(firestore, 'properties', newId).withConverter(propertyConverter);
         setDocumentNonBlocking(propertyRef, newProperty, {});
     };
 
     const updateProperty = async (property: Property) => {
         const propertyRef = doc(firestore, 'properties', property.id).withConverter(propertyConverter);
-        setDocumentNonBlocking(propertyRef, property, { merge: true });
+        setDocumentNonBlocking(propertyRef, { ...property, updatedAt: new Date().toISOString() }, { merge: true });
     };
 
     const removeProperty = async (propertyId: string) => {
