@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { PlusCircle, Trash2, Edit, Building, Store, Calendar as CalendarIcon, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +28,7 @@ const tenantSchema = z.object({
     dueDate: z.date({ required_error: "Due date is required."}),
     phone: z.string().optional(),
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
+    propertyId: z.string().optional(), // Not required, but used for selection
     propertyName: z.string().min(1, 'Property name is required'),
     propertyAddress: z.string().min(1, 'Property address is required'),
     depositAmount: z.coerce.number().optional(),
@@ -38,7 +39,7 @@ const tenantSchema = z.object({
 type TenantFormValues = z.infer<typeof tenantSchema>;
 
 export default function TenantsPage() {
-  const { tenants, addTenant, updateTenant, removeTenant, loading } = useContext(AppDataContext);
+  const { tenants, properties, addTenant, updateTenant, removeTenant, loading } = useContext(AppDataContext);
   const [isTenantFormOpen, setIsTenantFormOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const { toast } = useToast();
@@ -49,6 +50,18 @@ export default function TenantsPage() {
         paymentMethod: 'bank',
     }
   });
+
+  const selectedPropertyId = tenantForm.watch('propertyId');
+
+  useEffect(() => {
+    if (selectedPropertyId) {
+        const selectedProperty = properties.find(p => p.id === selectedPropertyId);
+        if (selectedProperty) {
+            tenantForm.setValue('propertyName', selectedProperty.name);
+            tenantForm.setValue('propertyAddress', selectedProperty.address);
+        }
+    }
+  }, [selectedPropertyId, properties, tenantForm]);
 
 
   const openTenantForm = (tenant: Tenant | null) => {
@@ -184,7 +197,7 @@ export default function TenantsPage() {
                 <DialogHeader>
                     <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={tenantForm.handleSubmit(handleTenantFormSubmit)} className="grid gap-4 py-4">
+                <form onSubmit={tenantForm.handleSubmit(handleTenantFormSubmit)} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="name">Tenant Name</Label>
@@ -202,6 +215,27 @@ export default function TenantsPage() {
                         <Input id="email" type="email" {...tenantForm.register('email')} />
                          {tenantForm.formState.errors.email && <p className="text-red-500 text-xs">{tenantForm.formState.errors.email.message}</p>}
                     </div>
+
+                    {!editingTenant && (
+                      <div className="grid gap-2">
+                          <Label>Select Property</Label>
+                          <Controller
+                              name="propertyId"
+                              control={tenantForm.control}
+                              render={({ field }) => (
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                      <SelectTrigger>
+                                          <SelectValue placeholder="Select a property to auto-fill" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                          {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                      </SelectContent>
+                                  </Select>
+                              )}
+                          />
+                      </div>
+                    )}
+
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="grid gap-2">
@@ -285,7 +319,7 @@ export default function TenantsPage() {
                         <Input id="notes" {...tenantForm.register('notes')} />
                     </div>
 
-                    <DialogFooter>
+                    <DialogFooter className="border-t pt-4 mt-4">
                         <DialogClose asChild>
                             <Button type="button" variant="outline">Cancel</Button>
                         </DialogClose>
