@@ -131,25 +131,26 @@ export default function DashboardPage() {
       setIsProcessing(false);
       setIsUploadDialogOpen(false);
       handleFileSelect(null);
-      setSelectedTenant(null);
+      // setSelectedTenant will be reset when receipt dialog closes
     }
   };
   
   const handleManualPayment = async () => {
     if (!selectedTenant) return;
+    const updatedTenant = { ...selectedTenant, status: 'paid' as 'paid' };
 
-    setTenants(tenants.map(t => t.id === selectedTenant.id ? { ...t, status: 'paid' } : t));
+    setTenants(tenants.map(t => t.id === selectedTenant.id ? updatedTenant : t));
 
     toast({
       title: "Payment Marked as Paid",
       description: `Rent for ${selectedTenant.name} has been manually marked as paid.`,
     });
 
-    await generateReceipt({ ...selectedTenant, status: 'paid' }, true);
+    await generateReceipt(updatedTenant, true);
 
     setIsUploadDialogOpen(false);
     handleFileSelect(null);
-    setSelectedTenant(null);
+    // Keep selectedTenant for the receipt dialog
   };
 
   const openUploadDialog = (tenant: Tenant) => {
@@ -239,7 +240,7 @@ export default function DashboardPage() {
   };
   
   const handleShare = async (tenant: Tenant) => {
-    const receiptUri = await generateReceipt(tenant);
+    const receiptUri = await generateReceipt(tenant, false);
     if (!receiptUri) return;
 
     if (navigator.share) {
@@ -255,25 +256,17 @@ export default function DashboardPage() {
             });
         } catch (error) {
             console.error('Error sharing:', error);
-            if (tenant.whatsappNumber) {
-                 const whatsappUrl = `https://wa.me/${tenant.whatsappNumber}?text=Hi%20${tenant.name},%20here%20is%20your%20rent%20receipt%20for%20$${tenant.rent}.%20You%20can%20download%20it.`;
-                 window.open(whatsappUrl, '_blank');
-            } else {
-                 toast({
-                    variant: "destructive",
-                    title: "Sharing failed",
-                    description: "Could not share the receipt automatically.",
-                });
-            }
+            toast({
+                variant: "destructive",
+                title: "Sharing failed",
+                description: "Could not share the receipt automatically.",
+            });
         }
-    } else if (tenant.whatsappNumber) {
-        const whatsappUrl = `https://wa.me/${tenant.whatsappNumber}?text=Hi%20${tenant.name},%20here%20is%20your%20rent%20receipt%20for%20$${tenant.rent}.%20You%20can%20download%20it.`;
-        window.open(whatsappUrl, '_blank');
     } else {
         toast({
             variant: "destructive",
             title: "Cannot Share",
-            description: "Sharing is not supported on this browser and no WhatsApp number is available.",
+            description: "Sharing is not supported on this browser.",
         });
     }
   };
@@ -421,7 +414,7 @@ export default function DashboardPage() {
             </DialogContent>
         </Dialog>
 
-        <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
+        <Dialog open={isReceiptDialogOpen} onOpenChange={(isOpen) => { setIsReceiptDialogOpen(isOpen); if (!isOpen) setSelectedTenant(null); }}>
             <DialogContent className="max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>Rent Receipt for {selectedTenant?.name}</DialogTitle>
@@ -433,7 +426,7 @@ export default function DashboardPage() {
                     {generatedReceipt && <iframe src={generatedReceipt} className="h-full w-full" title="Receipt" />}
                 </div>
                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsReceiptDialogOpen(false)}>Close</Button>
+                    <Button variant="outline" onClick={() => { setIsReceiptDialogOpen(false); setSelectedTenant(null); }}>Close</Button>
                     <Button asChild>
                         <a href={generatedReceipt ?? '#'} download={`${selectedTenant?.name}-receipt.pdf`}>Download</a>
                     </Button>
@@ -446,3 +439,5 @@ export default function DashboardPage() {
     </main>
   );
 }
+
+    
