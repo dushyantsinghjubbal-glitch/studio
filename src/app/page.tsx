@@ -107,14 +107,15 @@ export default function DashboardPage() {
       const recognizedTenant = tenants.find(t => t.name.toLowerCase() === result.tenantName.toLowerCase());
 
       if (recognizedTenant && recognizedTenant.id === selectedTenant.id) {
-         setTenants(tenants.map(t => t.id === recognizedTenant.id ? {...t, status: 'paid'} : t));
+         const updatedTenant = { ...recognizedTenant, status: 'paid' as 'paid' };
+         setTenants(tenants.map(t => t.id === recognizedTenant.id ? updatedTenant : t));
         
         toast({
           title: "Payment Verified!",
           description: `Rent for ${recognizedTenant.name} for $${result.amount} has been confirmed and marked as paid.`,
         });
         
-        await generateReceipt({...recognizedTenant, status: 'paid'}, true);
+        await generateReceipt(updatedTenant, true);
 
       } else {
          throw new Error(`Recognition failed. AI identified '${result.tenantName}', but expected '${selectedTenant.name}'.`);
@@ -131,7 +132,6 @@ export default function DashboardPage() {
       setIsProcessing(false);
       setIsUploadDialogOpen(false);
       handleFileSelect(null);
-      // setSelectedTenant will be reset when receipt dialog closes
     }
   };
   
@@ -145,12 +145,10 @@ export default function DashboardPage() {
       title: "Payment Marked as Paid",
       description: `Rent for ${selectedTenant.name} has been manually marked as paid.`,
     });
-
-    await generateReceipt(updatedTenant, true);
-
+    
     setIsUploadDialogOpen(false);
     handleFileSelect(null);
-    // Keep selectedTenant for the receipt dialog
+    await generateReceipt(updatedTenant, true);
   };
 
   const openUploadDialog = (tenant: Tenant) => {
@@ -263,11 +261,8 @@ export default function DashboardPage() {
             });
         }
     } else {
-        toast({
-            variant: "destructive",
-            title: "Cannot Share",
-            description: "Sharing is not supported on this browser.",
-        });
+      setSelectedTenant(tenant);
+      setIsReceiptDialogOpen(true);
     }
   };
 
@@ -426,7 +421,9 @@ export default function DashboardPage() {
                     {generatedReceipt && <iframe src={generatedReceipt} className="h-full w-full" title="Receipt" />}
                 </div>
                  <DialogFooter>
-                    <Button variant="outline" onClick={() => { setIsReceiptDialogOpen(false); setSelectedTenant(null); }}>Close</Button>
+                    <DialogClose asChild>
+                        <Button variant="outline">Close</Button>
+                    </DialogClose>
                     <Button asChild>
                         <a href={generatedReceipt ?? '#'} download={`${selectedTenant?.name}-receipt.pdf`}>Download</a>
                     </Button>
@@ -439,5 +436,3 @@ export default function DashboardPage() {
     </main>
   );
 }
-
-    
