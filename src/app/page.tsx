@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MoreVertical, Upload, CheckCircle2, XCircle, FileText, Share2, Building, Store, DollarSign, Users, Clock, PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
+import { MoreVertical, Upload, CheckCircle2, XCircle, FileText, Share2, Building, Store, DollarSign, Users, Clock, PlusCircle, Calendar as CalendarIcon, FileArchive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -283,6 +283,31 @@ export default function DashboardPage() {
     }
     return pdfDataUri;
   };
+
+  const handleGenerateAllReceipts = async () => {
+    toast({
+        title: "Generating All Receipts...",
+        description: "This may take a moment. Please wait.",
+    });
+
+    // TODO: When Firebase is connected, fetch all tenants from Firestore here.
+
+    const updatedTenants = tenants.map(tenant => ({ ...tenant, status: 'paid' as 'paid' }));
+    
+    for (const tenant of updatedTenants) {
+        // In a real implementation, you would generate the PDF,
+        // upload it to Firebase Storage, get the URL,
+        // and then update the tenant record in Firestore.
+        await generateReceipt(tenant, false);
+    }
+
+    setTenants(updatedTenants);
+
+    toast({
+        title: "All Receipts Generated!",
+        description: "All tenants have been marked as paid and their receipts are ready.",
+    });
+  };
   
   const handleShare = async (tenant: Tenant) => {
     const receiptUri = await generateReceipt(tenant, false);
@@ -354,10 +379,16 @@ export default function DashboardPage() {
                     <CardTitle>Tenant Payments</CardTitle>
                     <CardDescription>Manage your tenant payments and receipts.</CardDescription>
                 </div>
-                <Button onClick={() => setIsRentalReceiptFormOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Rental Receipt
-                </Button>
+                <div className="flex gap-2">
+                    <Button onClick={() => setIsRentalReceiptFormOpen(true)}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Rental Receipt
+                    </Button>
+                     <Button variant="outline" onClick={handleGenerateAllReceipts}>
+                        <FileArchive className="mr-2 h-4 w-4" />
+                        Generate All Receipts
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="divide-y divide-border">
@@ -443,7 +474,7 @@ export default function DashboardPage() {
                     <Button variant="secondary" onClick={handleManualPayment}>
                        <CheckCircle2 className="mr-2 h-4 w-4" /> Mark as Paid Manually
                     </Button>
-                    <div className="flex gap-2 self-end">
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                         <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>Cancel</Button>
                         <Button onClick={handleFileUpload} disabled={!selectedFile || isProcessing}>
                             {isProcessing ? (
@@ -473,7 +504,7 @@ export default function DashboardPage() {
                 <div className="h-[600px] w-full overflow-hidden rounded-md border">
                     {generatedReceipt && <iframe src={generatedReceipt} className="h-full w-full" title="Receipt" />}
                 </div>
-                 <DialogFooter className="flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end">
+                 <DialogFooter className="flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end sm:gap-2">
                     <DialogClose asChild>
                         <Button variant="outline">Close</Button>
                     </DialogClose>
