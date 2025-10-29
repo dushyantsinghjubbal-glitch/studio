@@ -191,6 +191,7 @@ export default function DashboardPage() {
   
   const generatePaidReceipt = async (tenant: Tenant, paymentDate?: Date, amount?: number) => {
     const receiptAmount = amount ?? tenant.rentAmount;
+    const paidDate = paymentDate ? new Date(paymentDate) : (tenant.lastPaymentDate ? new Date(tenant.lastPaymentDate) : new Date());
 
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage();
@@ -198,73 +199,107 @@ export default function DashboardPage() {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    const primaryColor = rgb(0/255, 122/255, 255/255);
-    const grayColor = rgb(0.3, 0.3, 0.3);
-    const lightGrayColor = rgb(0.5, 0.5, 0.5);
+    const primaryColor = rgb(34/255, 139/255, 34/255); // ForestGreen
+    const grayColor = rgb(0.2, 0.2, 0.2);
 
-    page.drawText('RentBox', { x: 50, y: height - 60, font: boldFont, size: 28, color: primaryColor });
-    page.drawText('Rental Payment Receipt', { x: 50, y: height - 90, font, size: 16, color: lightGrayColor });
-
-    const infoY = height - 150;
-    page.drawText('RECEIPT #', { x: 50, y: infoY, font, size: 10, color: lightGrayColor });
-    page.drawText(`${new Date().getFullYear()}-${String(tenant.id).padStart(4, '0')}`, { x: 50, y: infoY - 15, font: boldFont, size: 12, color: grayColor });
-    
-    page.drawText('DATE', { x: 200, y: infoY, font, size: 10, color: lightGrayColor });
-    page.drawText((paymentDate ?? new Date()).toLocaleDateString(), { x: 200, y: infoY - 15, font: boldFont, size: 12, color: grayColor });
-
-    page.drawLine({
-        start: { x: 50, y: infoY - 40 },
-        end: { x: width - 50, y: infoY - 40 },
-        thickness: 1,
-        color: rgb(0.9, 0.9, 0.9),
-    });
-    
-    const billedToY = infoY - 70;
-    page.drawText('BILLED TO', { x: 50, y: billedToY, font, size: 10, color: lightGrayColor });
-    page.drawText(tenant.name, { x: 50, y: billedToY - 15, font: boldFont, size: 14, color: grayColor });
-    page.drawText(tenant.propertyName, { x: 50, y: billedToY - 30, font, size: 12, color: grayColor });
-    page.drawText(tenant.propertyAddress, { x: 50, y: billedToY - 45, font, size: 12, color: grayColor });
-
-
-    const tableY = billedToY - 100;
-    const tableHeaderY = tableY;
-    page.drawText('DESCRIPTION', { x: 50, y: tableHeaderY, font, size: 10, color: lightGrayColor });
-    page.drawText('AMOUNT', { x: width - 150, y: tableHeaderY, font, size: 10, color: lightGrayColor, });
-    
-    page.drawLine({
-        start: { x: 50, y: tableHeaderY - 10 },
-        end: { x: width - 50, y: tableHeaderY - 10 },
-        thickness: 1,
-        color: rgb(0.9, 0.9, 0.9),
+    // Title
+    page.drawText('Thank You for Your Payment!', {
+        x: 50,
+        y: height - 80,
+        font: boldFont,
+        size: 30,
+        color: primaryColor
     });
 
-    const itemY = tableHeaderY - 30;
-    page.drawText(`Monthly Rent`, { x: 50, y: itemY, font, size: 12, color: grayColor });
-    page.drawText(`$${receiptAmount.toLocaleString()}`, { x: width - 150, y: itemY, font: boldFont, size: 12, color: grayColor, });
-
-    const totalY = itemY - 50;
-     page.drawLine({
-        start: { x: width - 200, y: totalY },
-        end: { x: width - 50, y: totalY },
-        thickness: 1,
-        color: rgb(0.9, 0.9, 0.9),
+    // Date
+    page.drawText(`Date: ${format(paidDate, 'PPP')}`, {
+        x: 50,
+        y: height - 120,
+        font: font,
+        size: 14,
+        color: grayColor
     });
-    page.drawText('TOTAL', { x: width - 200, y: totalY - 20, font: boldFont, size: 14, color: grayColor });
-    page.drawText(`$${receiptAmount.toLocaleString()}`, { x: width - 150, y: totalY - 20, font: boldFont, size: 14, color: primaryColor });
 
-    if (tenant.paymentStatus === 'paid') {
-      page.drawText('Thank you for your payment!', { x: 50, y: 80, font, size: 14, color: grayColor });
-    }
+    // Main Content
+    const contentY = height - 200;
+    page.drawText('Dear ', { x: 50, y: contentY, font: font, size: 12, color: grayColor });
+    page.drawText(tenant.name, { x: 75, y: contentY, font: boldFont, size: 12, color: grayColor });
+    page.drawText(',', { x: 75 + boldFont.widthOfTextAtSize(tenant.name, 12), y: contentY, font: font, size: 12, color: grayColor });
+    
 
-    const { status: paymentStatusText } = getPaymentStatus(tenant);
-    const statusText = `Status: ${paymentStatusText.toUpperCase()}`;
-    const statusColor = paymentStatusText === 'paid' ? rgb(0, 0.5, 0) : rgb(0.8, 0, 0);
-    page.drawText(statusText, { x: 50, y: 60, font: boldFont, size: 12, color: statusColor });
+    page.drawText(`This is to confirm that we have received your rent payment.`, {
+        x: 50,
+        y: contentY - 30,
+        font: font,
+        size: 12,
+        color: grayColor
+    });
 
+    // Payment Details Box
+    const boxY = contentY - 80;
+    const boxHeight = 100;
+    const boxWidth = width - 100;
+    page.drawRectangle({
+        x: 50,
+        y: boxY - boxHeight,
+        width: boxWidth,
+        height: boxHeight,
+        borderColor: primaryColor,
+        borderWidth: 1.5,
+        borderRadius: 5,
+    });
+    
+    page.drawText('Amount Paid:', {
+        x: 70,
+        y: boxY - 30,
+        font: font,
+        size: 16,
+        color: grayColor
+    });
+
+    page.drawText(`$${receiptAmount.toLocaleString()}`, {
+        x: width - 70 - boldFont.widthOfTextAtSize(`$${receiptAmount.toLocaleString()}`, 24),
+        y: boxY - 35,
+        font: boldFont,
+        size: 24,
+        color: primaryColor,
+    });
+
+    page.drawText('For Property:', {
+        x: 70,
+        y: boxY - 70,
+        font: font,
+        size: 12,
+        color: grayColor
+    });
+
+    page.drawText(tenant.propertyAddress, {
+        x: 70,
+        y: boxY - 85,
+        font: boldFont,
+        size: 12,
+        color: grayColor
+    });
+
+    // Footer
+    page.drawText('Your payment has been successfully recorded. Thank you!', {
+        x: 50,
+        y: 100,
+        font: font,
+        size: 14,
+        color: grayColor
+    });
+
+    page.drawText('RentBox', {
+        x: 50,
+        y: 60,
+        font: boldFont,
+        size: 18,
+        color: grayColor
+    });
 
     const pdfBytes = await pdfDoc.save();
-    const pdfDataUri = `data:application/pdf;base64,${Buffer.from(pdfBytes).toString('base64')}`;
-    return pdfDataUri;
+    return `data:application/pdf;base64,${Buffer.from(pdfBytes).toString('base64')}`;
   };
 
   const handleViewReceipt = async (tenant: Tenant) => {
@@ -272,7 +307,8 @@ export default function DashboardPage() {
     
     const { status } = getPaymentStatus(tenant);
     if (status === 'paid') {
-        const receiptUri = await generatePaidReceipt(tenant);
+        const lastPaymentDate = tenant.lastPaymentDate ? new Date(tenant.lastPaymentDate) : new Date();
+        const receiptUri = await generatePaidReceipt(tenant, lastPaymentDate, tenant.rentAmount);
         setGeneratedReceipt(receiptUri);
     } else {
         // For pending/overdue, we don't generate a PDF URI, 
@@ -291,7 +327,8 @@ export default function DashboardPage() {
     let blob;
 
     if (status === 'paid') {
-        receiptUri = await generatePaidReceipt(tenant);
+        const lastPaymentDate = tenant.lastPaymentDate ? new Date(tenant.lastPaymentDate) : new Date();
+        receiptUri = await generatePaidReceipt(tenant, lastPaymentDate, tenant.rentAmount);
         if (!receiptUri) return;
         const response = await fetch(receiptUri);
         blob = await response.blob();
@@ -605,4 +642,3 @@ export default function DashboardPage() {
         </Dialog>
     </main>
   );
-}
