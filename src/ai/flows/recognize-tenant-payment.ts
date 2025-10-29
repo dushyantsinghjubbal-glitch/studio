@@ -15,7 +15,7 @@ const TenantInfoSchema = z.object({
     rentAmount: z.number().describe('The expected rent amount for the tenant.')
 });
 
-export const RecognizeTenantPaymentInputSchema = z.object({
+const RecognizeTenantPaymentInputSchema = z.object({
   photoDataUri: z
     .string()
     .describe(
@@ -25,13 +25,13 @@ export const RecognizeTenantPaymentInputSchema = z.object({
 });
 export type RecognizeTenantPaymentInput = z.infer<typeof RecognizeTenantPaymentInputSchema>;
 
-export const RecognizeTenantPaymentOutputSchema = z.object({
+const RecognizeTenantPaymentOutputSchema = z.object({
   tenantName: z.string().describe('The name of the tenant identified from the screenshot.'),
   amount: z.number().describe("The payment amount identified from the screenshot."),
 });
 export type RecognizeTenantPaymentOutput = z.infer<typeof RecognizeTenantPaymentOutputSchema>;
 
-export async function recognizeTenantPayment(input: RecognizeTenantPaymentInput): Promise<RecognizeTenantPaymentOutput> {
+export async function recognizeTenantPayment(input: RecognizeTenantPaymentInput): Promise<RecognicateTenantPaymentOutput> {
   return recognizeTenantPaymentFlow(input);
 }
 
