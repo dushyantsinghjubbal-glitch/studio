@@ -15,6 +15,7 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { recognizeTenantPayment, type RecognizeTenantPaymentInput } from '@/ai/flows/recognize-tenant-payment';
 import Image from 'next/image';
 import { format } from 'date-fns';
+import { Separator } from '@/components/ui/separator';
 
 type Property = {
   id: string;
@@ -132,6 +133,23 @@ export default function DashboardPage() {
       handleFileSelect(null);
       setSelectedTenant(null);
     }
+  };
+  
+  const handleManualPayment = async () => {
+    if (!selectedTenant) return;
+
+    setTenants(tenants.map(t => t.id === selectedTenant.id ? { ...t, status: 'paid' } : t));
+
+    toast({
+      title: "Payment Marked as Paid",
+      description: `Rent for ${selectedTenant.name} has been manually marked as paid.`,
+    });
+
+    await generateReceipt({ ...selectedTenant, status: 'paid' }, true);
+
+    setIsUploadDialogOpen(false);
+    handleFileSelect(null);
+    setSelectedTenant(null);
   };
 
   const openUploadDialog = (tenant: Tenant) => {
@@ -366,12 +384,12 @@ export default function DashboardPage() {
                 <DialogHeader>
                     <DialogTitle>Upload Payment Screenshot</DialogTitle>
                     <DialogDescription>
-                        Upload the payment proof for {selectedTenant?.name}. Our AI will verify it.
+                        Upload the payment proof for {selectedTenant?.name} or mark it as paid manually.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid w-full max-w-sm items-center gap-1.5">
-                        <Label htmlFor="picture">Payment Screenshot</Label>
+                        <Label htmlFor="picture">AI Verification</Label>
                         <Input id="picture" type="file" accept="image/*" onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)} />
                     </div>
                     {previewUrl && (
@@ -380,20 +398,25 @@ export default function DashboardPage() {
                         </div>
                     )}
                 </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={handleFileUpload} disabled={!selectedFile || isProcessing}>
-                        {isProcessing ? (
-                            <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                                Verifying...
-                            </>
-                        ) : (
-                            <>
-                                <Upload className="mr-2 h-4 w-4" /> Upload and Verify
-                            </>
-                        )}
+                 <DialogFooter className="sm:justify-between items-center pt-4 border-t">
+                    <Button variant="secondary" onClick={handleManualPayment}>
+                       <CheckCircle2 className="mr-2 h-4 w-4" /> Mark as Paid Manually
                     </Button>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleFileUpload} disabled={!selectedFile || isProcessing}>
+                            {isProcessing ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                                    Verifying...
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="mr-2 h-4 w-4" /> Upload and Verify
+                                </>
+                            )}
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
