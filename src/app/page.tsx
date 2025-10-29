@@ -201,7 +201,9 @@ export default function DashboardPage() {
     page.drawText('TOTAL', { x: width - 200, y: totalY - 20, font: boldFont, size: 14, color: grayColor });
     page.drawText(`$${tenant.rent.toLocaleString()}`, { x: width - 150, y: totalY - 20, font: boldFont, size: 14, color: primaryColor });
 
-    page.drawText('Thank you for your payment!', { x: 50, y: 80, font, size: 14, color: grayColor });
+    if (tenant.status === 'paid') {
+      page.drawText('Thank you for your payment!', { x: 50, y: 80, font, size: 14, color: grayColor });
+    }
 
     const statusText = `Status: ${tenant.status.toUpperCase()}`;
     const statusColor = tenant.status === 'paid' ? rgb(0, 0.5, 0) : rgb(0.8, 0, 0);
