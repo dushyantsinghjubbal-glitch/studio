@@ -1,19 +1,37 @@
 'use client';
 
 import { useState } from 'react';
-import { DollarSign, Users, Clock, MoreVertical, Upload, CheckCircle2, XCircle, Home as HomeIcon, FileText, Share2 } from 'lucide-react';
+import { DollarSign, Users, Clock, MoreVertical, Upload, CheckCircle2, XCircle, Home as HomeIcon, FileText, Share2, PlusCircle, Trash2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { recognizeTenantPayment, type RecognizeTenantPaymentInput } from '@/ai/flows/recognize-tenant-payment';
 import Image from 'next/image';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Building, Store } from 'lucide-react';
+
+const tenantSchema = z.object({
+    name: z.string().min(1, 'Name is required'),
+    rent: z.coerce.number().min(1, 'Rent must be a positive number'),
+    dueDate: z.string().min(1, 'Due date is required'),
+    whatsappNumber: z.string().optional(),
+    propertyType: z.enum(['apartment', 'shop']),
+    propertyName: z.string().min(1, 'Property name is required'),
+});
+
+type TenantFormValues = z.infer<typeof tenantSchema>;
+
 
 type Tenant = {
   id: string;
@@ -23,25 +41,33 @@ type Tenant = {
   status: 'paid' | 'pending';
   dueDate: string;
   whatsappNumber?: string;
+  propertyType: 'apartment' | 'shop';
+  propertyName: string;
 };
 
 const initialTenants: Tenant[] = [
-  { id: '1', name: 'John Doe', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d', rent: 1200, status: 'paid', dueDate: '1st May 2024', whatsappNumber: '1234567890' },
-  { id: '2', name: 'Jane Smith', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', rent: 950, status: 'pending', dueDate: '5th May 2024', whatsappNumber: '0987654321' },
-  { id: '3', name: 'Sam Wilson', avatar: 'https://i.pravatar.cc/150?u=a04258114e29026702d', rent: 1500, status: 'paid', dueDate: '3rd May 2024' },
-  { id: '4', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', rent: 1100, status: 'pending', dueDate: '10th May 2024', whatsappNumber: '1122334455' },
+  { id: '1', name: 'John Doe', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026024d', rent: 1200, status: 'paid', dueDate: '1st May 2024', whatsappNumber: '1234567890', propertyType: 'apartment', propertyName: 'Apt 101, Sunrise Building' },
+  { id: '2', name: 'Jane Smith', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', rent: 950, status: 'pending', dueDate: '5th May 2024', whatsappNumber: '0987654321', propertyType: 'shop', propertyName: 'Groceries R Us' },
+  { id: '3', name: 'Sam Wilson', avatar: 'https://i.pravatar.cc/150?u=a04258114e29026702d', rent: 1500, status: 'paid', dueDate: '3rd May 2024', propertyType: 'apartment', propertyName: 'Apt 202, Sunrise Building' },
+  { id: '4', name: 'Alice Johnson', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', rent: 1100, status: 'pending', dueDate: '10th May 2024', whatsappNumber: '1122334455', propertyType: 'shop', propertyName: 'The Corner Bookstore' },
 ];
 
 export default function Home() {
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
+  const [isTenantFormOpen, setIsTenantFormOpen] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedReceipt, setGeneratedReceipt] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<TenantFormValues>({
+    resolver: zodResolver(tenantSchema),
+  });
 
   const totalIncome = tenants.filter(t => t.status === 'paid').reduce((acc, t) => acc + t.rent, 0);
   const pendingRent = tenants.filter(t => t.status === 'pending').reduce((acc, t) => acc + t.rent, 0);
@@ -95,7 +121,6 @@ export default function Home() {
           description: `Rent for ${recognizedTenant.name} for $${result.amount} has been confirmed and marked as paid.`,
         });
         
-        // Automatically generate and show receipt
         await generateReceipt(recognizedTenant, true);
 
       } else {
@@ -121,6 +146,56 @@ export default function Home() {
     setSelectedTenant(tenant);
     setIsUploadDialogOpen(true);
   };
+  
+  const openTenantForm = (tenant: Tenant | null) => {
+    setEditingTenant(tenant);
+    if (tenant) {
+        reset({
+            name: tenant.name,
+            rent: tenant.rent,
+            dueDate: tenant.dueDate,
+            whatsappNumber: tenant.whatsappNumber || '',
+            propertyType: tenant.propertyType,
+            propertyName: tenant.propertyName,
+        });
+    } else {
+        reset({
+            name: '',
+            rent: 0,
+            dueDate: '',
+            whatsappNumber: '',
+            propertyType: 'apartment',
+            propertyName: '',
+        });
+    }
+    setIsTenantFormOpen(true);
+  };
+
+  const handleTenantFormSubmit = (data: TenantFormValues) => {
+    if (editingTenant) {
+        // Edit existing tenant
+        setTenants(tenants.map(t => t.id === editingTenant.id ? { ...editingTenant, ...data } : t));
+        toast({ title: "Tenant Updated", description: `${data.name}'s details have been updated.` });
+    } else {
+        // Add new tenant
+        const newTenant: Tenant = {
+            id: (tenants.length + 1).toString(),
+            ...data,
+            status: 'pending',
+            avatar: `https://i.pravatar.cc/150?u=${Math.random()}`,
+        };
+        setTenants([...tenants, newTenant]);
+        toast({ title: "Tenant Added", description: `${data.name} has been added to your tenants list.` });
+    }
+    setIsTenantFormOpen(false);
+    setEditingTenant(null);
+  };
+
+  const handleRemoveTenant = (tenantId: string) => {
+    setTenants(tenants.filter(t => t.id !== tenantId));
+    toast({ variant: 'destructive', title: 'Tenant Removed', description: 'The tenant has been removed from your list.' });
+  };
+
 
   const generateReceipt = async (tenant: Tenant, openDialog: boolean = false) => {
     const pdfDoc = await PDFDocument.create();
@@ -133,11 +208,9 @@ export default function Home() {
     const grayColor = rgb(0.3, 0.3, 0.3);
     const lightGrayColor = rgb(0.5, 0.5, 0.5);
 
-    // Header
     page.drawText('RentBox', { x: 50, y: height - 60, font: boldFont, size: 28, color: primaryColor });
     page.drawText('Rental Payment Receipt', { x: 50, y: height - 90, font, size: 16, color: lightGrayColor });
 
-    // Receipt Info
     const infoY = height - 150;
     page.drawText('RECEIPT #', { x: 50, y: infoY, font, size: 10, color: lightGrayColor });
     page.drawText(`${new Date().getFullYear()}-${String(tenant.id).padStart(4, '0')}`, { x: 50, y: infoY - 15, font: boldFont, size: 12, color: grayColor });
@@ -145,7 +218,6 @@ export default function Home() {
     page.drawText('DATE', { x: 200, y: infoY, font, size: 10, color: lightGrayColor });
     page.drawText(new Date().toLocaleDateString(), { x: 200, y: infoY - 15, font: boldFont, size: 12, color: grayColor });
 
-    // Line separator
     page.drawLine({
         start: { x: 50, y: infoY - 40 },
         end: { x: width - 50, y: infoY - 40 },
@@ -153,12 +225,11 @@ export default function Home() {
         color: rgb(0.9, 0.9, 0.9),
     });
     
-    // Billed To
     const billedToY = infoY - 70;
     page.drawText('BILLED TO', { x: 50, y: billedToY, font, size: 10, color: lightGrayColor });
     page.drawText(tenant.name, { x: 50, y: billedToY - 15, font: boldFont, size: 14, color: grayColor });
+    page.drawText(tenant.propertyName, { x: 50, y: billedToY - 30, font, size: 12, color: grayColor });
 
-    // Table
     const tableY = billedToY - 80;
     const tableHeaderY = tableY;
     page.drawText('DESCRIPTION', { x: 50, y: tableHeaderY, font, size: 10, color: lightGrayColor });
@@ -172,10 +243,9 @@ export default function Home() {
     });
 
     const itemY = tableHeaderY - 30;
-    page.drawText('Monthly Rent - May 2024', { x: 50, y: itemY, font, size: 12, color: grayColor });
+    page.drawText(`Monthly Rent - ${tenant.propertyType === 'shop' ? 'Shop' : 'Apartment'}`, { x: 50, y: itemY, font, size: 12, color: grayColor });
     page.drawText(`$${tenant.rent.toLocaleString()}`, { x: width - 150, y: itemY, font: boldFont, size: 12, color: grayColor, });
 
-    // Total
     const totalY = itemY - 50;
      page.drawLine({
         start: { x: width - 200, y: totalY },
@@ -186,7 +256,6 @@ export default function Home() {
     page.drawText('TOTAL', { x: width - 200, y: totalY - 20, font: boldFont, size: 14, color: grayColor });
     page.drawText(`$${tenant.rent.toLocaleString()}`, { x: width - 150, y: totalY - 20, font: boldFont, size: 14, color: primaryColor });
 
-    // Footer
     page.drawText('Thank you for your payment!', { x: 50, y: 80, font, size: 14, color: grayColor });
     page.drawText('Status: PAID', { x: 50, y: 60, font: boldFont, size: 12, color: rgb(0, 0.5, 0) });
 
@@ -218,7 +287,6 @@ export default function Home() {
             });
         } catch (error) {
             console.error('Error sharing:', error);
-            // Fallback to WhatsApp if sharing files fails (e.g. on desktop)
             if (tenant.whatsappNumber) {
                  const whatsappUrl = `https://wa.me/${tenant.whatsappNumber}?text=Hi%20${tenant.name},%20your%20rent%20of%20$${tenant.rent}%20has%20been%20received.%20You%20can%20download%20your%20receipt.`;
                  window.open(whatsappUrl, '_blank');
@@ -231,7 +299,6 @@ export default function Home() {
             }
         }
     } else if (tenant.whatsappNumber) {
-        // Fallback for browsers that don't support Web Share API
         const whatsappUrl = `https://wa.me/${tenant.whatsappNumber}?text=Hi%20${tenant.name},%20your%20rent%20of%20$${tenant.rent}%20has%20been%20received.%20You%20can%20download%20your%20receipt.`;
         window.open(whatsappUrl, '_blank');
     } else {
@@ -250,6 +317,12 @@ export default function Home() {
             <div className="flex items-center gap-2">
                 <HomeIcon className="h-6 w-6 text-primary" />
                 <h1 className="text-2xl font-bold tracking-tight">RentBox</h1>
+            </div>
+             <div className="ml-auto">
+                <Button onClick={() => openTenantForm(null)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Tenant
+                </Button>
             </div>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
@@ -276,19 +349,19 @@ export default function Home() {
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Tenants</CardTitle>
+                        <CardTitle className="text-sm font-medium">Total Properties</CardTitle>
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{tenants.length}</div>
-                        <p className="text-xs text-muted-foreground">Total active tenants</p>
+                        <p className="text-xs text-muted-foreground">Total active tenants/properties</p>
                     </CardContent>
                 </Card>
             </div>
             <div>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Tenants</CardTitle>
+                        <CardTitle>Tenants & Properties</CardTitle>
                         <CardDescription>Manage your tenants and their rent payments.</CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -296,12 +369,16 @@ export default function Home() {
                             {tenants.map((tenant) => (
                                 <div key={tenant.id} className="flex items-center justify-between py-3">
                                     <div className="flex items-center gap-4">
-                                        <Avatar>
+                                        <Avatar className="h-12 w-12">
                                             <AvatarImage src={tenant.avatar} />
                                             <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
                                         </Avatar>
                                         <div>
                                             <p className="font-medium">{tenant.name}</p>
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                {tenant.propertyType === 'apartment' ? <Building className="h-4 w-4" /> : <Store className="h-4 w-4" />}
+                                                <span>{tenant.propertyName}</span>
+                                            </div>
                                             <p className="text-sm text-muted-foreground">Due on: {tenant.dueDate}</p>
                                         </div>
                                     </div>
@@ -338,6 +415,33 @@ export default function Home() {
                                                         </DropdownMenuItem>
                                                     </>
                                                 )}
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onClick={() => openTenantForm(tenant)}>
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    <span>Edit</span>
+                                                </DropdownMenuItem>
+                                                 <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                            <Trash2 className="mr-2 h-4 w-4 text-red-500" />
+                                                            <span className="text-red-500">Remove Tenant</span>
+                                                        </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action cannot be undone. This will permanently remove {tenant.name} and all their data.
+                                                        </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleRemoveTenant(tenant.id)} className="bg-red-600 hover:bg-red-700">
+                                                            Yes, remove tenant
+                                                        </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
@@ -348,6 +452,69 @@ export default function Home() {
                 </Card>
             </div>
         </main>
+        
+        {/* Tenant Add/Edit Dialog */}
+        <Dialog open={isTenantFormOpen} onOpenChange={setIsTenantFormOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit(handleTenantFormSubmit)} className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Tenant Name</Label>
+                        <Input id="name" {...register('name')} />
+                        {errors.name && <p className="text-red-500 text-xs">{errors.name.message}</p>}
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="propertyName">Property Name / Address</Label>
+                        <Input id="propertyName" {...register('propertyName')} />
+                        {errors.propertyName && <p className="text-red-500 text-xs">{errors.propertyName.message}</p>}
+                    </div>
+                     <div className="grid gap-2">
+                        <Label>Property Type</Label>
+                        <Controller
+                            control={control}
+                            name="propertyType"
+                            render={({ field }) => (
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select property type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="apartment">Apartment</SelectItem>
+                                        <SelectItem value="shop">Shop</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                         {errors.propertyType && <p className="text-red-500 text-xs">{errors.propertyType.message}</p>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                         <div className="grid gap-2">
+                            <Label htmlFor="rent">Rent Amount ($)</Label>
+                            <Input id="rent" type="number" {...register('rent')} />
+                            {errors.rent && <p className="text-red-500 text-xs">{errors.rent.message}</p>}
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="dueDate">Due Date</Label>
+                            <Input id="dueDate" {...register('dueDate')} />
+                            {errors.dueDate && <p className="text-red-500 text-xs">{errors.dueDate.message}</p>}
+                        </div>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="whatsappNumber">WhatsApp Number (Optional)</Label>
+                        <Input id="whatsappNumber" {...register('whatsappNumber')} />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit">{editingTenant ? 'Save Changes' : 'Add Tenant'}</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+
          <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
             <DialogContent>
                 <DialogHeader>
@@ -409,3 +576,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
