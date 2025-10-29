@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useContext } from 'react';
-import { PlusCircle, Trash2, Edit, Building, Store, Land, Briefcase, Calendar as CalendarIcon, MoreVertical } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Building, Store, Trees, Briefcase, Calendar as CalendarIcon, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AppDataContext, Property } from '@/context/AppDataContext';
 import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const propertySchema = z.object({
     name: z.string().min(1, 'Property name is required'),
@@ -93,12 +94,14 @@ export default function PropertiesPage() {
       const propertyData = {
           ...data,
           currentTenantId: data.occupancyStatus === 'occupied' ? data.currentTenantId : '',
+          rentDueDate: data.rentDueDate,
+          availabilityDate: data.availabilityDate,
       };
       if (editingProperty) {
           await updateProperty({ ...editingProperty, ...propertyData });
           toast({ title: "Property Updated", description: `${data.name} has been updated.` });
       } else {
-          await addProperty(propertyData);
+          await addProperty(propertyData as Omit<Property, 'id' | 'createdAt' | 'updatedAt'>);
           toast({ title: "Property Added", description: `${data.name} has been added.` });
       }
       setIsPropertyFormOpen(false);
@@ -114,7 +117,7 @@ export default function PropertiesPage() {
     switch (type) {
         case 'shop': return <Store className="h-8 w-8 text-muted-foreground" />;
         case 'flat': return <Building className="h-8 w-8 text-muted-foreground" />;
-        case 'land': return <Land className="h-8 w-8 text-muted-foreground" />;
+        case 'land': return <Trees className="h-8 w-8 text-muted-foreground" />;
         case 'office': return <Briefcase className="h-8 w-8 text-muted-foreground" />;
         default: return <Building className="h-8 w-8 text-muted-foreground" />;
     }
@@ -151,7 +154,7 @@ export default function PropertiesPage() {
                                         <p className="font-medium">{property.name}</p>
                                         <p className="text-sm text-muted-foreground">{property.address}</p>
                                         <div className="flex items-center gap-2">
-                                            <Badge variant={property.occupancyStatus === 'vacant' ? 'default' : 'secondary'} className={occupancyStatusColors[property.occupancyStatus]}>
+                                            <Badge variant={property.occupancyStatus === 'vacant' ? 'default' : 'secondary'} className={cn(occupancyStatusColors[property.occupancyStatus])}>
                                                 {property.occupancyStatus.charAt(0).toUpperCase() + property.occupancyStatus.slice(1)}
                                             </Badge>
                                              <p className="text-sm font-semibold">${property.rentAmount}/mo</p>
@@ -360,3 +363,5 @@ export default function PropertiesPage() {
     </main>
   );
 }
+
+    
