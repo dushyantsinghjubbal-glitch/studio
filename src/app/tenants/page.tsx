@@ -59,6 +59,13 @@ export default function TenantsPage() {
         if (selectedProperty) {
             tenantForm.setValue('propertyName', selectedProperty.name);
             tenantForm.setValue('propertyAddress', selectedProperty.address);
+            tenantForm.setValue('rentAmount', selectedProperty.rentAmount);
+            if (selectedProperty.depositAmount) {
+                tenantForm.setValue('depositAmount', selectedProperty.depositAmount);
+            }
+            if (selectedProperty.rentDueDate) {
+                tenantForm.setValue('dueDate', new Date(selectedProperty.rentDueDate));
+            }
         }
     }
   }, [selectedPropertyId, properties, tenantForm]);
@@ -91,6 +98,7 @@ export default function TenantsPage() {
             depositAmount: 0,
             paymentMethod: 'bank',
             notes: '',
+            propertyId: '',
         });
     }
     setIsTenantFormOpen(true);
@@ -228,7 +236,7 @@ export default function TenantsPage() {
                                           <SelectValue placeholder="Select a property to auto-fill" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                          {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                          {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name} - {p.address}</SelectItem>)}
                                       </SelectContent>
                                   </Select>
                               )}
