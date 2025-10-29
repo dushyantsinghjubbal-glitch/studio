@@ -1,62 +1,84 @@
 {
   "entities": {
-    "PdfDocument": {
+    "Property": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "PdfDocument",
+      "title": "Property",
       "type": "object",
-      "description": "Represents a generated PDF document.",
+      "description": "Represents a rental property.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the PDF document."
+          "description": "Unique identifier for the property."
         },
-        "fileName": {
+        "name": {
           "type": "string",
-          "description": "The name of the PDF file."
+          "description": "The name or address of the property."
         },
-        "content": {
+        "type": {
           "type": "string",
-          "description": "The content of the PDF, possibly a URL or base64 encoded data."
-        },
-        "creationDate": {
-          "type": "string",
-          "description": "The date and time the PDF was created.",
-          "format": "date-time"
+          "description": "The type of property.",
+          "enum": ["apartment", "shop"]
         }
       },
-      "required": [
-        "id",
-        "fileName",
-        "content",
-        "creationDate"
-      ]
+      "required": ["id", "name", "type"]
+    },
+    "Tenant": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Tenant",
+      "type": "object",
+      "description": "Represents a tenant.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the tenant."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the tenant."
+        },
+        "avatar": {
+          "type": "string",
+          "description": "URL for the tenant's avatar image."
+        },
+        "rent": {
+          "type": "number",
+          "description": "The monthly rent amount."
+        },
+        "status": {
+          "type": "string",
+          "description": "The payment status of the tenant.",
+          "enum": ["paid", "pending"]
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "The rent due date.",
+          "format": "date-time"
+        },
+        "whatsappNumber": {
+          "type": "string",
+          "description": "The tenant's WhatsApp number."
+        },
+        "propertyId": {
+          "type": "string",
+          "description": "The ID of the property the tenant is renting."
+        }
+      },
+      "required": ["id", "name", "avatar", "rent", "status", "dueDate", "propertyId"]
     }
   },
   "auth": {
     "providers": [
-      "password",
       "anonymous"
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/pdf_documents/{pdfDocumentId}",
-        "definition": {
-          "entityName": "PdfDocument",
-          "schema": {
-            "$ref": "#/backend/entities/PdfDocument"
-          },
-          "description": "Stores the generated PDF documents. The 'pdfDocumentId' is the unique identifier for each document.",
-          "params": [
-            {
-              "name": "pdfDocumentId",
-              "description": "The unique identifier for the PDF document."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "Given the simple nature of the application, where users generate PDFs and potentially share them, a straightforward structure is proposed. Since there's no collaborative aspect or user-specific data beyond generated PDFs, we'll store the PDFs directly under a top-level collection.  This design prioritizes simplicity.  \n\n**Authorization Independence:** Authorization rules will likely revolve around rate limiting or preventing abuse, which can be handled without complex data dependencies.\n\n**QAPs (Rules are not Filters):** Since all documents in `/pdf_documents` will have the same security posture (e.g., accessible via a temporary download link), QAPs are supported by ensuring structural segregation. If user-specific PDFs with different access controls were needed, we'd use a structure like `/users/{userId}/pdfs/{pdfId}`.\n"
+    "/properties/{propertyId}": {
+        "schema": { "$ref": "#/entities/Property" },
+        "description": "Stores all property information."
+    },
+    "/tenants/{tenantId}": {
+        "schema": { "$ref": "#/entities/Tenant" },
+        "description": "Stores all tenant information."
+    }
   }
 }

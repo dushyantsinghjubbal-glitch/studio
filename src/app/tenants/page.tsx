@@ -33,7 +33,7 @@ const tenantSchema = z.object({
 type TenantFormValues = z.infer<typeof tenantSchema>;
 
 export default function TenantsPage() {
-  const { tenants, setTenants, properties } = useContext(AppDataContext);
+  const { tenants, properties, addTenant, updateTenant, removeTenant, loading } = useContext(AppDataContext);
   const [isTenantFormOpen, setIsTenantFormOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const { toast } = useToast();
@@ -66,27 +66,20 @@ export default function TenantsPage() {
     setIsTenantFormOpen(true);
   };
 
-  const handleTenantFormSubmit = (data: TenantFormValues) => {
+  const handleTenantFormSubmit = async (data: TenantFormValues) => {
     if (editingTenant) {
-        const updatedTenant = { ...editingTenant, ...data };
-        setTenants(tenants.map(t => t.id === editingTenant.id ? updatedTenant : t));
+        await updateTenant({ ...editingTenant, ...data });
         toast({ title: "Tenant Updated", description: `${data.name}'s details have been updated.` });
     } else {
-        const newTenant: Tenant = {
-            id: (tenants.length + 1 + Math.random()).toString(),
-            ...data,
-            status: 'pending',
-            avatar: `https://i.pravatar.cc/150?u=${Math.random()}`,
-        };
-        setTenants([...tenants, newTenant]);
+        await addTenant(data);
         toast({ title: "Tenant Added", description: `${data.name} has been added to your tenants list.` });
     }
     setIsTenantFormOpen(false);
     setEditingTenant(null);
   };
 
-  const handleRemoveTenant = (tenantId: string) => {
-    setTenants(tenants.filter(t => t.id !== tenantId));
+  const handleRemoveTenant = async (tenantId: string) => {
+    await removeTenant(tenantId);
     toast({ variant: 'destructive', title: 'Tenant Removed', description: 'The tenant has been removed from your list.' });
   };
 
@@ -104,68 +97,70 @@ export default function TenantsPage() {
                 </Button>
             </CardHeader>
             <CardContent>
-                <div className="divide-y divide-border">
-                    {tenants.map((tenant) => {
-                        const property = getPropertyForTenant(tenant);
-                        return (
-                            <div key={tenant.id} className="flex items-center justify-between py-3">
-                                <div className="flex items-center gap-4">
-                                    <Avatar className="h-12 w-12">
-                                        <AvatarImage src={tenant.avatar} />
-                                        <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <p className="font-medium">{tenant.name}</p>
-                                        {property && (
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                {property.type === 'apartment' ? <Building className="h-4 w-4" /> : <Store className="h-4 w-4" />}
-                                                <span>{property.name}</span>
-                                            </div>
-                                        )}
-                                        <p className="text-sm text-muted-foreground">Rent: ${tenant.rent} | Due on: {format(new Date(tenant.dueDate), 'PPP')}</p>
+                {loading ? (<p>Loading tenants...</p>) : (
+                    <div className="divide-y divide-border">
+                        {tenants.map((tenant) => {
+                            const property = getPropertyForTenant(tenant);
+                            return (
+                                <div key={tenant.id} className="flex items-center justify-between py-3">
+                                    <div className="flex items-center gap-4">
+                                        <Avatar className="h-12 w-12">
+                                            <AvatarImage src={tenant.avatar} />
+                                            <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-medium">{tenant.name}</p>
+                                            {property && (
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    {property.type === 'apartment' ? <Building className="h-4 w-4" /> : <Store className="h-4 w-4" />}
+                                                    <span>{property.name}</span>
+                                                </div>
+                                            )}
+                                            <p className="text-sm text-muted-foreground">Rent: ${tenant.rent} | Due on: {format(new Date(tenant.dueDate), 'PPP')}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => openTenantForm(tenant)}>
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    <span>Edit Tenant</span>
+                                                </DropdownMenuItem>
+                                                 <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                            <Trash2 className="mr-2 h-4 w-4 text-red-500" />
+                                                            <span className="text-red-500">Remove Tenant</span>
+                                                        </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action cannot be undone. This will permanently remove {tenant.name} and all their data.
+                                                        </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleRemoveTenant(tenant.id)} className="bg-red-600 hover:bg-red-700">
+                                                            Yes, remove tenant
+                                                        </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => openTenantForm(tenant)}>
-                                                <Edit className="mr-2 h-4 w-4" />
-                                                <span>Edit Tenant</span>
-                                            </DropdownMenuItem>
-                                             <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                        <Trash2 className="mr-2 h-4 w-4 text-red-500" />
-                                                        <span className="text-red-500">Remove Tenant</span>
-                                                    </DropdownMenuItem>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This action cannot be undone. This will permanently remove {tenant.name} and all their data.
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleRemoveTenant(tenant.id)} className="bg-red-600 hover:bg-red-700">
-                                                        Yes, remove tenant
-                                                    </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
+                            )
+                        })}
+                    </div>
+                )}
             </CardContent>
         </Card>
 
@@ -207,8 +202,7 @@ export default function TenantsPage() {
                             {tenantForm.formState.errors.rent && <p className="text-red-500 text-xs">{tenantForm.formState.errors.rent.message}</p>}
                         </div>
                         <div className="grid gap-2">
-                           <Label htmlFor="dueDate">Due Date</Label>
-                            <Controller
+                           <Label htmlFor="dueDate">Due Date</Label>                            <Controller
                                 control={tenantForm.control}
                                 name="dueDate"
                                 render={({ field }) => (

@@ -13,7 +13,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Link from 'next/link';
 import { AppDataContext, Property } from '@/context/AppDataContext';
 
 const propertySchema = z.object({
@@ -24,7 +23,7 @@ const propertySchema = z.object({
 type PropertyFormValues = z.infer<typeof propertySchema>;
 
 export default function PropertiesPage() {
-  const { properties, setProperties, tenants } = useContext(AppDataContext);
+  const { properties, addProperty, updateProperty, removeProperty, tenants, loading } = useContext(AppDataContext);
   const [isPropertyFormOpen, setIsPropertyFormOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const { toast } = useToast();
@@ -50,17 +49,12 @@ export default function PropertiesPage() {
     setIsPropertyFormOpen(true);
   };
 
-  const handlePropertyFormSubmit = (data: PropertyFormValues) => {
+  const handlePropertyFormSubmit = async (data: PropertyFormValues) => {
       if (editingProperty) {
-          setProperties(properties.map(p => p.id === editingProperty.id ? { ...editingProperty, ...data } : p));
+          await updateProperty({ ...editingProperty, ...data });
           toast({ title: "Property Updated", description: `${data.name} has been updated.` });
       } else {
-          const newProperty: Property = {
-              id: (properties.length + 1 + Math.random()).toString(),
-              name: data.name,
-              type: data.type
-          };
-          setProperties([...properties, newProperty]);
+          await addProperty(data);
           toast({ title: "Property Added", description: `${data.name} has been added.` });
       }
       setIsPropertyFormOpen(false);
@@ -72,7 +66,7 @@ export default function PropertiesPage() {
         toast({ variant: 'destructive', title: 'Cannot Remove Property', description: 'This property is currently assigned to a tenant.' });
         return;
     }
-    setProperties(properties.filter(p => p.id !== propertyId));
+    removeProperty(propertyId);
     toast({ variant: 'destructive', title: 'Property Removed', description: 'The property has been removed.' });
   };
 
@@ -92,49 +86,50 @@ export default function PropertiesPage() {
                 <CardDescription>Manage your rental properties.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="divide-y divide-border">
-                    {properties.map((property) => (
-                        <div key={property.id} className="flex items-center justify-between py-3">
-                            <div className="flex items-center gap-4">
-                                {property.type === 'apartment' ? <Building className="h-8 w-8 text-muted-foreground" /> : <Store className="h-8 w-8 text-muted-foreground" />}
-                                <div>
-                                    <p className="font-medium">{property.name}</p>
-                                    <p className="text-sm text-muted-foreground">{property.type.charAt(0).toUpperCase() + property.type.slice(1)}</p>
+                 {loading ? (<p>Loading properties...</p>) : (
+                    <div className="divide-y divide-border">
+                        {properties.map((property) => (
+                            <div key={property.id} className="flex items-center justify-between py-3">
+                                <div className="flex items-center gap-4">
+                                    {property.type === 'apartment' ? <Building className="h-8 w-8 text-muted-foreground" /> : <Store className="h-8 w-8 text-muted-foreground" />}
+                                    <div>
+                                        <p className="font-medium">{property.name}</p>
+                                        <p className="text-sm text-muted-foreground">{property.type.charAt(0).toUpperCase() + property.type.slice(1)}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => openPropertyForm(property)}>
+                                        <Edit className="mr-2 h-3 w-3" /> Edit
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="sm">
+                                                <Trash2 className="mr-2 h-3 w-3" /> Remove
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. You can only remove properties that are not assigned to any tenant.
+                                            </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleRemoveProperty(property.id)} className="bg-red-600 hover:bg-red-700">
+                                                Yes, remove property
+                                            </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" onClick={() => openPropertyForm(property)}>
-                                    <Edit className="mr-2 h-3 w-3" /> Edit
-                                </Button>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="sm">
-                                            <Trash2 className="mr-2 h-3 w-3" /> Remove
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action cannot be undone. You can only remove properties that are not assigned to any tenant.
-                                        </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleRemoveProperty(property.id)} className="bg-red-600 hover:bg-red-700">
-                                            Yes, remove property
-                                        </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
             </CardContent>
         </Card>
         
-        {/* Property Add/Edit Dialog */}
         <Dialog open={isPropertyFormOpen} onOpenChange={setIsPropertyFormOpen}>
             <DialogContent>
                 <DialogHeader>

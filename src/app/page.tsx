@@ -34,7 +34,7 @@ const rentalReceiptSchema = z.object({
 type RentalReceiptFormValues = z.infer<typeof rentalReceiptSchema>;
 
 export default function DashboardPage() {
-  const { tenants, setTenants, properties } = useContext(AppDataContext);
+  const { tenants, properties, updateTenant, loading } = useContext(AppDataContext);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
@@ -65,8 +65,8 @@ export default function DashboardPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'Tenant not found.' });
         return;
     }
-    const updatedTenant = { ...tenant, status: 'paid' as 'paid', rent: data.amount };
-    setTenants(tenants.map(t => t.id === data.tenantId ? updatedTenant : t));
+    const updatedTenantData = { ...tenant, status: 'paid' as 'paid', rent: data.amount };
+    await updateTenant(updatedTenantData);
     
     toast({
         title: "Payment Recorded",
@@ -75,7 +75,7 @@ export default function DashboardPage() {
 
     setIsRentalReceiptFormOpen(false);
     rentalReceiptForm.reset();
-    await generateReceipt(updatedTenant, true, data.paymentDate, data.amount);
+    await generateReceipt(updatedTenantData, true, data.paymentDate, data.amount);
   };
 
 
@@ -121,15 +121,15 @@ export default function DashboardPage() {
       const recognizedTenant = tenants.find(t => t.name.toLowerCase() === result.tenantName.toLowerCase());
 
       if (recognizedTenant && recognizedTenant.id === selectedTenant.id) {
-         const updatedTenant = { ...recognizedTenant, status: 'paid' as 'paid' };
-         setTenants(tenants.map(t => t.id === recognizedTenant.id ? updatedTenant : t));
+         const updatedTenantData = { ...recognizedTenant, status: 'paid' as 'paid' };
+         await updateTenant(updatedTenantData);
         
         toast({
           title: "Payment Verified!",
           description: `Rent for ${recognizedTenant.name} for $${result.amount} has been confirmed and marked as paid.`,
         });
         
-        await generateReceipt(updatedTenant, true);
+        await generateReceipt(updatedTenantData, true);
 
       } else {
          throw new Error(`Recognition failed. AI identified '${result.tenantName}', but expected '${selectedTenant.name}'.`);
@@ -151,9 +151,9 @@ export default function DashboardPage() {
   
   const handleManualPayment = async () => {
     if (!selectedTenant) return;
-    const updatedTenant = { ...selectedTenant, status: 'paid' as 'paid' };
+    const updatedTenantData = { ...selectedTenant, status: 'paid' as 'paid' };
 
-    setTenants(tenants.map(t => t.id === selectedTenant.id ? updatedTenant : t));
+    await updateTenant(updatedTenantData);
 
     toast({
       title: "Payment Marked as Paid",
@@ -162,7 +162,7 @@ export default function DashboardPage() {
     
     setIsUploadDialogOpen(false);
     handleFileSelect(null);
-    await generateReceipt(updatedTenant, true);
+    await generateReceipt(updatedTenantData, true);
   };
 
   const openUploadDialog = (tenant: Tenant) => {
@@ -259,18 +259,17 @@ export default function DashboardPage() {
         description: "This may take a moment. Please wait.",
     });
 
-    const updatedTenants = tenants.map(tenant => ({ ...tenant, status: 'paid' as 'paid' }));
-    
-    // Using a for...of loop to ensure await works correctly inside the loop.
-    for (const tenant of updatedTenants) {
-        await generateReceipt(tenant, false);
+    for (const tenant of tenants) {
+      if (tenant.status === 'pending') {
+        const updatedTenantData = { ...tenant, status: 'paid' as 'paid' };
+        await updateTenant(updatedTenantData);
+        await generateReceipt(updatedTenantData, false);
+      }
     }
-
-    setTenants(updatedTenants);
 
     toast({
         title: "All Receipts Generated!",
-        description: "All tenants have been marked as paid and their receipts are ready.",
+        description: "All pending tenants have been marked as paid and their receipts are ready.",
     });
   };
   
@@ -356,6 +355,7 @@ export default function DashboardPage() {
                 </div>
             </CardHeader>
             <CardContent>
+               {loading ? (<p>Loading payments...</p>) : (
                 <div className="divide-y divide-border">
                     {tenants.map((tenant) => {
                         const property = getPropertyForTenant(tenant);
@@ -413,6 +413,7 @@ export default function DashboardPage() {
                         )
                     })}
                 </div>
+                )}
             </CardContent>
         </Card>
 
