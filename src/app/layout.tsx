@@ -31,14 +31,29 @@ function UserMenu() {
             await signOut(auth);
         }
     };
+    
+    const getInitials = (name?: string | null, email?: string | null) => {
+        if (name) {
+            const nameParts = name.split(' ');
+            if (nameParts.length > 1) {
+                return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+        if (email) {
+            return email.substring(0, 2).toUpperCase();
+        }
+        return 'U';
+    };
+
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10 border-2 border-primary">
-                        <AvatarImage src={user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`} alt={user.displayName || user.email || ''} />
-                        <AvatarFallback>{user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                        {/* We are removing the AvatarImage to always show the fallback */}
+                        <AvatarFallback>{getInitials(user.displayName, user.email)}</AvatarFallback>
                     </Avatar>
                 </Button>
             </DropdownMenuTrigger>
@@ -125,7 +140,7 @@ function NavMenu() {
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Tenants" onClick={() => setOpenMobile(false)}>
+                <SidebarMenuButton asChild tooltip="Tenants" onClick={() => setOpenmobile(false)}>
                     <Link href="/tenants">
                         <Users />
                         <span>Tenants</span>
