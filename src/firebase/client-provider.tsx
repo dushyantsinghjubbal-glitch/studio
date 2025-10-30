@@ -25,16 +25,21 @@ function AuthGate({ children }: { children: ReactNode }) {
     const isPublicPath = publicPaths.includes(pathname);
 
     if (!user && !isPublicPath) {
-      // If no user and not a public path, redirect to login
+      // If no user and not a public path, it might be the initial anonymous sign-in process.
+      // The provider will show a loader until a user (even anonymous) is available.
+      // If the user is truly logged out and trying to access a protected page, they will be redirected.
       router.push('/login');
     } else if (user && !user.isAnonymous && isPublicPath) {
       // If logged in user (not anon) is on a public path (like login), redirect to dashboard
       router.push('/');
     }
   }, [user, isUserLoading, router, pathname]);
+  
+  const isPublicPath = publicPaths.includes(pathname);
 
-  if (isUserLoading || (!user && !publicPaths.includes(pathname))) {
-    // While checking auth state, or if redirecting, show a global loader
+  // Show a global loader while the auth state is being determined.
+  // Or if we are on a protected route and don't have a user yet (including anonymous).
+  if (isUserLoading || (!user && !isPublicPath)) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Loading...</p>
@@ -42,8 +47,8 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
   
-  if (user && !user.isAnonymous && publicPaths.includes(pathname)) {
-    // If user is logged in and tries to access login page, show loading while redirecting
+  // If a logged-in user hits a public page, show a redirecting message.
+  if (user && !user.isAnonymous && isPublicPath) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Redirecting...</p>
@@ -51,6 +56,7 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
 
+  // Once a user (anonymous or authenticated) is available, render the children.
   return <>{children}</>;
 }
 
