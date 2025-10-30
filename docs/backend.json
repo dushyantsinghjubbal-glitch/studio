@@ -253,7 +253,7 @@
     ]
   },
   "firestore": {
-    "firestore.rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n\n    function isAuthenticated() {\n      return request.auth != null;\n    }\n\n    match /properties/{propertyId} {\n      allow list, get, write: if isAuthenticated();\n    }\n\n    match /tenants/{tenantId} {\n      allow list, get, write: if isAuthenticated();\n    }\n\n    match /transactions/{transactionId} {\n      allow list, get, write: if isAuthenticated();\n    }\n  }\n}",
+    "firestore.rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n\n    function isAuthenticated() {\n      return request.auth != null;\n    }\n\n    match /properties/{propertyId} {\n      allow get, write: if isAuthenticated();\n    }\n\n    match /properties/{path=**} {\n      allow list: if isAuthenticated();\n    }\n\n    match /tenants/{tenantId} {\n      allow get, write: if isAuthenticated();\n    }\n\n    match /tenants/{path=**} {\n      allow list: if isAuthenticated();\n    }\n\n    match /transactions/{transactionId} {\n      allow get, write: if isAuthenticated();\n    }\n\n    match /transactions/{path=**} {\n      allow list: if isAuthenticated();\n    }\n  }\n}",
     "/properties/{propertyId}": {
       "schema": {
         "$ref": "#/entities/Property"
