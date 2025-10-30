@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,7 +39,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 
-export default function LoginPage() {
+function LoginContent() {
   const { toast } = useToast();
   const auth = useAuth();
   const router = useRouter();
@@ -211,3 +212,13 @@ export default function LoginPage() {
     </div>
   );
 }
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <LoginContent />
+        </Suspense>
+    )
+}
+
+    
