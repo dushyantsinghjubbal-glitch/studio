@@ -2,7 +2,7 @@
 
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarItem, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarItem, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { Home, Users, Building, LogOut, Wallet, BotMessageSquare, Plus, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -104,6 +104,46 @@ function FloatingActionButton() {
   );
 }
 
+function NavMenu() {
+    const { setOpenMobile } = useSidebar();
+    return (
+        <SidebarMenu>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Dashboard" onClick={() => setOpenMobile(false)}>
+                    <Link href="/">
+                        <Home />
+                        <span>Dashboard</span>
+                    </Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Ledger" onClick={() => setOpenMobile(false)}>
+                    <Link href="/ledger">
+                        <Wallet />
+                        <span>Ledger</span>
+                    </Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Tenants" onClick={() => setOpenMobile(false)}>
+                    <Link href="/tenants">
+                        <Users />
+                        <span>Tenants</span>
+                    </Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Properties" onClick={() => setOpenMobile(false)}>
+                    <Link href="/properties">
+                        <Building />
+                        <span>Properties</span>
+                    </Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        </SidebarMenu>
+    )
+}
+
 
 export default function RootLayout({
   children,
@@ -131,40 +171,7 @@ export default function RootLayout({
                           </div>
                       </SidebarHeader>
                       <SidebarContent>
-                          <SidebarMenu>
-                              <SidebarMenuItem>
-                                  <SidebarMenuButton asChild tooltip="Dashboard">
-                                      <Link href="/">
-                                          <Home />
-                                          <span>Dashboard</span>
-                                      </Link>
-                                  </SidebarMenuButton>
-                              </SidebarMenuItem>
-                               <SidebarMenuItem>
-                                  <SidebarMenuButton asChild tooltip="Ledger">
-                                      <Link href="/ledger">
-                                          <Wallet />
-                                          <span>Ledger</span>
-                                      </Link>
-                                  </SidebarMenuButton>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <SidebarMenuButton asChild tooltip="Tenants">
-                                      <Link href="/tenants">
-                                          <Users />
-                                          <span>Tenants</span>
-                                      </Link>
-                                  </SidebarMenuButton>
-                              </SidebarMenuItem>
-                              <SidebarMenuItem>
-                                  <SidebarMenuButton asChild tooltip="Properties">
-                                      <Link href="/properties">
-                                          <Building />
-                                          <span>Properties</span>
-                                      </Link>
-                                  </SidebarMenuButton>
-                              </SidebarMenuItem>
-                          </SidebarMenu>
+                          <NavMenu />
                       </SidebarContent>
                        <SidebarFooter>
                             <UserMenu />
