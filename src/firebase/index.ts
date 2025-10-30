@@ -5,53 +5,48 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore'
 
-// IMPORTANT: DO NOT MODIFY THIS FUNCTION
-export function initializeFirebase() {
-  if (!getApps().length) {
-    // Important! initializeApp() is called without any arguments because Firebase App Hosting
-    // integrates with the initializeApp() function to provide the environment variables needed to
-    // populate the FirebaseOptions in production. It is critical that we attempt to call initializeApp()
-    // without arguments.
-    let firebaseApp;
+let firebaseApp: FirebaseApp;
+if (!getApps().length) {
     try {
-      // Attempt to initialize via Firebase App Hosting environment variables
       firebaseApp = initializeApp();
     } catch (e) {
-      // Only warn in production because it's normal to use the firebaseConfig to initialize
-      // during development
       if (process.env.NODE_ENV === "production") {
         console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
       }
       firebaseApp = initializeApp(firebaseConfig);
     }
+} else {
+    firebaseApp = getApp();
+}
 
-    return getSdks(firebaseApp);
-  }
+const firestore = getFirestore(firebaseApp);
+try {
+    enableIndexedDbPersistence(firestore);
+} catch (error: any) {
+    if (error.code == 'failed-precondition') {
+        console.warn('Firestore persistence failed to enable. This is likely due to multiple tabs being open.');
+    } else if (error.code == 'unimplemented') {
+        console.warn('Firestore persistence is not available in this browser.');
+    }
+}
 
-  // If already initialized, return the SDKs with the already initialized App
-  return getSdks(getApp());
+const auth = getAuth(firebaseApp);
+
+
+// IMPORTANT: DO NOT MODIFY THIS FUNCTION
+export function initializeFirebase() {
+  return {
+    firebaseApp,
+    auth,
+    firestore
+  };
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
-  const firestore = getFirestore(firebaseApp);
-  try {
-    enableIndexedDbPersistence(firestore);
-  } catch (error: any) {
-    if (error.code == 'failed-precondition') {
-      // Multiple tabs open, persistence can only be enabled
-      // in one tab at a time.
-      console.warn('Firestore persistence failed to enable. This is likely due to multiple tabs being open.');
-    } else if (error.code == 'unimplemented') {
-      // The current browser does not support all of the
-      // features required to enable persistence
-      console.warn('Firestore persistence is not available in this browser.');
-    }
-  }
-
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore
+    firestore: getFirestore(firebaseApp),
   };
 }
 
