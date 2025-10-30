@@ -69,12 +69,6 @@ export default function DashboardPage() {
     <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 animate-in fade-in-50">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline">
-              <Bell className="mr-2 h-4 w-4" />
-              Send Reminders
-            </Button>
-          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
