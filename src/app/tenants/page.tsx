@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useContext, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PlusCircle, Trash2, Edit, MoreVertical, Calendar as CalendarIcon, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -45,6 +46,8 @@ export default function TenantsPage() {
   const [isTenantFormOpen, setIsTenantFormOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const tenantForm = useForm<TenantFormValues>({
     resolver: zodResolver(tenantSchema),
@@ -55,6 +58,12 @@ export default function TenantsPage() {
   });
 
   const selectedPropertyId = tenantForm.watch('propertyId');
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'add') {
+      openTenantForm(null);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (selectedPropertyId) {
@@ -119,6 +128,7 @@ export default function TenantsPage() {
     }
     setIsTenantFormOpen(false);
     setEditingTenant(null);
+    router.replace('/tenants'); // clean up query param
   };
 
   const handleRemoveTenant = async (tenantId: string) => {
@@ -225,7 +235,10 @@ export default function TenantsPage() {
         </Card>
 
         {/* Tenant Add/Edit Dialog */}
-        <Dialog open={isTenantFormOpen} onOpenChange={setIsTenantFormOpen}>
+        <Dialog open={isTenantFormOpen} onOpenChange={(isOpen) => {
+            setIsTenantFormOpen(isOpen);
+            if (!isOpen) router.replace('/tenants');
+        }}>
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</DialogTitle>

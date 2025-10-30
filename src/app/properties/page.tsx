@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PlusCircle, Trash2, Edit, Building, Store, Trees, Briefcase, Calendar as CalendarIcon, MoreVertical, Search, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -21,7 +22,6 @@ import { cn } from '@/lib/utils';
 import { AppDataContext, Property } from '@/context/AppDataContext';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { useRouter } from 'next/navigation';
 
 
 const propertySchema = z.object({
@@ -51,6 +51,7 @@ export default function PropertiesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   const propertyForm = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema),
@@ -63,6 +64,12 @@ export default function PropertiesPage() {
         maintenanceCharge: 0,
     }
   });
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'add') {
+      openPropertyForm(null);
+    }
+  }, [searchParams]);
 
   const openPropertyForm = (property: Property | null) => {
     setEditingProperty(property);
@@ -110,6 +117,7 @@ export default function PropertiesPage() {
       }
       setIsPropertyFormOpen(false);
       setEditingProperty(null);
+      router.replace('/properties'); // clean up query param
   };
   
   const handleRemoveProperty = (propertyId: string) => {
@@ -238,7 +246,10 @@ export default function PropertiesPage() {
             </CardContent>
         </Card>
         
-        <Dialog open={isPropertyFormOpen} onOpenChange={setIsPropertyFormOpen}>
+        <Dialog open={isPropertyFormOpen} onOpenChange={(isOpen) => {
+            setIsPropertyFormOpen(isOpen);
+            if (!isOpen) router.replace('/properties');
+        }}>
             <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>{editingProperty ? 'Edit Property' : 'Add New Property'}</DialogTitle>

@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { signOut } from 'firebase/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 function UserMenu() {
     const { user } = useUser();
@@ -54,27 +54,53 @@ function UserMenu() {
 
 function FloatingActionButton() {
   const router = useRouter();
+  const pathname = usePathname();
+
+  const getFabContent = () => {
+    switch (pathname) {
+      case '/properties':
+        return (
+          <Button className="h-16 w-16 rounded-full shadow-lg" size="icon" onClick={() => router.push('/properties?action=add')}>
+            <Building className="mr-0 h-6 w-6" />
+             <Plus className="absolute bottom-3 right-3 h-4 w-4 bg-primary text-primary-foreground rounded-full p-0.5" />
+          </Button>
+        );
+      case '/tenants':
+        return (
+          <Button className="h-16 w-16 rounded-full shadow-lg" size="icon" onClick={() => router.push('/tenants?action=add')}>
+            <Users className="mr-0 h-6 w-6" />
+            <Plus className="absolute bottom-3 right-3 h-4 w-4 bg-primary text-primary-foreground rounded-full p-0.5" />
+          </Button>
+        );
+      default:
+        return (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button className="h-16 w-16 rounded-full shadow-lg" size="icon">
+                <Plus className="h-8 w-8" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-2 mb-2" align="end">
+              <div className="grid gap-1">
+                <Button variant="ghost" className="justify-start" onClick={() => router.push('/ledger?action=add')}>
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Add Transaction
+                </Button>
+                <Button variant="ghost" className="justify-start" onClick={() => router.push('/ledger?action=scan')}>
+                  <Receipt className="mr-2 h-4 w-4" />
+                  Scan Receipt
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        );
+    }
+  };
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg" size="icon">
-          <Plus className="h-8 w-8" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-2 mb-2" align="end">
-        <div className="grid gap-1">
-          <Button variant="ghost" className="justify-start" onClick={() => router.push('/ledger?action=add')}>
-            <Wallet className="mr-2 h-4 w-4" />
-            Add Transaction
-          </Button>
-          <Button variant="ghost" className="justify-start" onClick={() => router.push('/ledger?action=scan')}>
-            <Receipt className="mr-2 h-4 w-4" />
-            Scan Receipt
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <div className="fixed bottom-6 right-6 z-50">
+        {getFabContent()}
+    </div>
   );
 }
 
