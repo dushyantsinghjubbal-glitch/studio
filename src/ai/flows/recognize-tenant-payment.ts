@@ -10,7 +10,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const RecognizeTransactionInputSchema = z.object({
+const RecognizeTransactionInputSchema = z.object({
   photoDataUri: z
     .string()
     .describe(
@@ -20,7 +20,7 @@ export const RecognizeTransactionInputSchema = z.object({
 });
 export type RecognizeTransactionInput = z.infer<typeof RecognizeTransactionInputSchema>;
 
-export const RecognizeTransactionOutputSchema = z.object({
+const RecognizeTransactionOutputSchema = z.object({
   title: z.string().describe('A short, descriptive title for the transaction, like "Monthly Rent" or "Grocery Shopping".'),
   amount: z.number().describe("The total amount of the transaction found on the receipt."),
   date: z.string().datetime().describe('The date of the transaction in ISO 8601 format (YYYY-MM-DD).'),
