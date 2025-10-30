@@ -164,7 +164,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const [shouldFetchTransactions, setShouldFetchTransactions] = useState(false);
 
     useEffect(() => {
-        // Basic path matching. For /[propertyId], we can just check the start.
         const isOnTxPage = transactionPages.some(p => {
             if (p.includes('[propertyId]')) {
                 return pathname.startsWith('/properties/');
