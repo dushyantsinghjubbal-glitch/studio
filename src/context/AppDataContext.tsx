@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, ReactNode, useEffect, useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { usePathname } from 'next/navigation';
@@ -159,6 +159,7 @@ const transactionPages = ['/', '/ledger', '/properties/[propertyId]'];
 
 export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const firestore = useFirestore();
+    const { user, isUserLoading } = useUser();
     const pathname = usePathname();
     
     const [shouldFetchTransactions, setShouldFetchTransactions] = useState(false);
@@ -173,17 +174,25 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         setShouldFetchTransactions(isOnTxPage);
     }, [pathname]);
 
+    // Only set up queries if a user is authenticated
+    const tenantsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return collection(firestore, 'tenants').withConverter(tenantConverter);
+    }, [firestore, user]);
+    
+    const propertiesQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return collection(firestore, 'properties').withConverter(propertyConverter);
+    }, [firestore, user]);
 
-    const tenantsQuery = useMemoFirebase(() => collection(firestore, 'tenants').withConverter(tenantConverter), [firestore]);
-    const propertiesQuery = useMemoFirebase(() => collection(firestore, 'properties').withConverter(propertyConverter), [firestore]);
     const transactionsQuery = useMemoFirebase(() => {
-        if (!shouldFetchTransactions) return null;
+        if (!user || !shouldFetchTransactions) return null;
         return collection(firestore, 'transactions').withConverter(transactionConverter);
-    }, [firestore, shouldFetchTransactions]);
+    }, [firestore, user, shouldFetchTransactions]);
 
-    const { data: tenants = [], isLoading: tenantsLoading, error: tenantsError } = useCollection<Tenant>(tenantsQuery);
-    const { data: properties = [], isLoading: propertiesLoading, error: propertiesError } = useCollection<Property>(propertiesQuery);
-    const { data: transactions = [], isLoading: transactionsLoading, error: transactionsError } = useCollection<Transaction>(transactionsQuery);
+    const { data: tenants, isLoading: tenantsLoading, error: tenantsError } = useCollection<Tenant>(tenantsQuery);
+    const { data: properties, isLoading: propertiesLoading, error: propertiesError } = useCollection<Property>(propertiesQuery);
+    const { data: transactions, isLoading: transactionsLoading, error: transactionsError } = useCollection<Transaction>(transactionsQuery);
     
     const addTenant = async (tenantData: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt'>) => {
         const newId = doc(collection(firestore, 'tenants')).id;
@@ -250,7 +259,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         removeProperty,
         transactions: transactions ?? [],
         addTransaction,
-        loading: tenantsLoading || propertiesLoading || transactionsLoading,
+        loading: isUserLoading || tenantsLoading || propertiesLoading || transactionsLoading,
         error: tenantsError || propertiesError || transactionsError,
     };
 
