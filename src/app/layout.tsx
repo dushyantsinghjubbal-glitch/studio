@@ -4,7 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarItem, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { Home, Users, Building, LogOut, Wallet, BotMessageSquare, Plus, Receipt } from 'lucide-react';
+import { Home, Users, Building, LogOut, Wallet, Plus, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppDataProvider } from '@/context/AppDataContext';
 import { FirebaseClientProvider, useUser, useAuth } from '@/firebase';
@@ -166,7 +166,9 @@ export default function RootLayout({
                   <Sidebar>
                       <SidebarHeader>
                           <div className="flex items-center gap-2 p-2">
-                              <BotMessageSquare className="h-8 w-8 text-primary" />
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                                  <span className="text-sm font-bold">FP</span>
+                              </div>
                               <span className="text-2xl font-bold tracking-tight">FinProp</span>
                           </div>
                       </SidebarHeader>
