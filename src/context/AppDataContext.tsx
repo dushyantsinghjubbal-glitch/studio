@@ -172,7 +172,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
             return p === pathname;
         });
         setShouldFetchTransactions(isOnTxPage);
-    }, [pathname]);
+    }, [pathname, user]);
 
     // Only set up queries if a user is authenticated
     const tenantsQuery = useMemoFirebase(() => {
