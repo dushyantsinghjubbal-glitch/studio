@@ -3,7 +3,7 @@
 import { useState, useContext, useEffect } from 'react';
 import { PlusCircle, Trash2, Edit, MoreVertical, Calendar as CalendarIcon, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
@@ -138,7 +138,7 @@ export default function TenantsPage() {
             <CardContent>
                 {loading ? (<p>Loading tenants...</p>) : tenants.length === 0 ? (
                     <div className="text-center py-12">
-                        <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <UserPlus className="mx-auto h-12 w-12 text-muted-foreground" />
                         <h3 className="mt-4 text-lg font-semibold">No tenants found</h3>
                         <p className="mt-1 text-sm text-muted-foreground">Get started by adding your first tenant.</p>
                         <Button className="mt-6" onClick={() => openTenantForm(null)}>
