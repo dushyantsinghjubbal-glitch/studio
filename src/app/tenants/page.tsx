@@ -207,7 +207,7 @@ export default function TenantsPage() {
                                 </CardHeader>
                                 <CardContent className="flex-grow space-y-2">
                                      <div className="text-sm text-muted-foreground">
-                                        Rent: <span className="font-semibold text-foreground">${tenant.rentAmount.toLocaleString()}</span>
+                                        Rent: <span className="font-semibold text-foreground">₹{tenant.rentAmount.toLocaleString()}</span>
                                     </div>
                                     <div className="text-sm text-muted-foreground">
                                         Due on: <span className="font-semibold text-foreground">{format(new Date(tenant.dueDate), 'do MMMM')}</span>
@@ -297,7 +297,7 @@ export default function TenantsPage() {
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                          <div className="grid gap-2">
-                            <Label htmlFor="rentAmount">Rent Amount ($)</Label>
+                            <Label htmlFor="rentAmount">Rent Amount (₹)</Label>
                             <Input id="rentAmount" type="number" {...tenantForm.register('rentAmount')} />
                             {tenantForm.formState.errors.rentAmount && <p className="text-red-500 text-xs">{tenantForm.formState.errors.rentAmount.message}</p>}
                         </div>
@@ -333,7 +333,7 @@ export default function TenantsPage() {
                             {tenantForm.formState.errors.dueDate && <p className="text-red-500 text-xs">{tenantForm.formState.errors.dueDate.message}</p>}
                         </div>
                          <div className="grid gap-2">
-                            <Label htmlFor="depositAmount">Deposit ($)</Label>
+                            <Label htmlFor="depositAmount">Deposit (₹)</Label>
                             <Input id="depositAmount" type="number" {...tenantForm.register('depositAmount')} />
                         </div>
                     </div>

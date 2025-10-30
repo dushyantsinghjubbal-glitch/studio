@@ -228,7 +228,7 @@ export default function PropertiesPage() {
                                 </CardHeader>
                                 <CardContent className="flex-grow space-y-2">
                                      <div className="text-sm font-semibold text-primary">
-                                        ${property.rentAmount}/month
+                                        ₹{property.rentAmount}/month
                                     </div>
                                     <div className="text-sm text-muted-foreground capitalize">
                                         Category: {property.category}
@@ -312,16 +312,16 @@ export default function PropertiesPage() {
 
                     <div className="grid md:grid-cols-3 gap-4">
                          <div className="grid gap-2">
-                            <Label htmlFor="rentAmount">Rent Amount ($)</Label>
+                            <Label htmlFor="rentAmount">Rent Amount (₹)</Label>
                             <Input id="rentAmount" type="number" {...propertyForm.register('rentAmount')} />
                             {propertyForm.formState.errors.rentAmount && <p className="text-red-500 text-xs">{propertyForm.formState.errors.rentAmount.message}</p>}
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="depositAmount">Deposit Amount ($)</Label>
+                            <Label htmlFor="depositAmount">Deposit Amount (₹)</Label>
                             <Input id="depositAmount" type="number" {...propertyForm.register('depositAmount')} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="maintenanceCharge">Maintenance ($/mo)</Label>
+                            <Label htmlFor="maintenanceCharge">Maintenance (₹/mo)</Label>
                             <Input id="maintenanceCharge" type="number" {...propertyForm.register('maintenanceCharge')} />
                         </div>
                     </div>

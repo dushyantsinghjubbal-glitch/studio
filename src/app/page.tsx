@@ -19,7 +19,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               Income
             </span>
             <span className="font-bold text-accent">
-              ${payload[0].value.toLocaleString()}
+              ₹{payload[0].value.toLocaleString()}
             </span>
           </div>
           <div className="flex flex-col space-y-1">
@@ -27,7 +27,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               Expense
             </span>
             <span className="font-bold text-destructive">
-              ${payload[1].value.toLocaleString()}
+              ₹{payload[1].value.toLocaleString()}
             </span>
           </div>
         </div>
@@ -98,7 +98,7 @@ export default function DashboardPage() {
                     <Clock className="h-5 w-5 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">${loading ? '...' : pendingAmount.toLocaleString()}</div>
+                    <div className="text-2xl font-bold">₹{loading ? '...' : pendingAmount.toLocaleString()}</div>
                     <p className="text-xs text-muted-foreground">From {pendingRents} tenant(s)</p>
                 </CardContent>
             </Card>
@@ -108,7 +108,7 @@ export default function DashboardPage() {
                     <BarChart2 className="h-5 w-5 text-accent" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-accent">+${totalMonthlyIncome.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-accent">+₹{totalMonthlyIncome.toLocaleString()}</div>
                     <p className="text-xs text-muted-foreground">Income this month</p>
                 </CardContent>
             </Card>
@@ -136,7 +136,7 @@ export default function DashboardPage() {
                               fontSize={12}
                               tickLine={false}
                               axisLine={false}
-                              tickFormatter={(value) => `$${Number(value) / 1000}k`}
+                              tickFormatter={(value) => `₹${Number(value) / 1000}k`}
                           />
                           <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", radius: 'var(--radius)' }} />
                           <Legend iconSize={10} />

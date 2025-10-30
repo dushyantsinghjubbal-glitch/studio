@@ -21,7 +21,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               Income
             </span>
             <span className="font-bold text-accent">
-              ${payload[0].value.toLocaleString()}
+              ₹{payload[0].value.toLocaleString()}
             </span>
           </div>
           <div className="flex flex-col space-y-1">
@@ -29,7 +29,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               Expense
             </span>
             <span className="font-bold text-destructive">
-              ${payload[1].value.toLocaleString()}
+              ₹{payload[1].value.toLocaleString()}
             </span>
           </div>
         </div>
@@ -103,7 +103,7 @@ export default function PropertyDetailsPage() {
                     <Wallet className="h-4 w-4 text-accent" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-accent">${totalIncome.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-accent">₹{totalIncome.toLocaleString()}</div>
                     <p className="text-xs text-muted-foreground">Total income from this property</p>
                 </CardContent>
             </Card>
@@ -113,7 +113,7 @@ export default function PropertyDetailsPage() {
                     <Wallet className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-destructive">${totalExpense.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-destructive">₹{totalExpense.toLocaleString()}</div>
                      <p className="text-xs text-muted-foreground">Total expenses for this property</p>
                 </CardContent>
             </Card>
@@ -123,7 +123,7 @@ export default function PropertyDetailsPage() {
                     <Wallet className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
-                    <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>${netProfit.toLocaleString()}</div>
+                    <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>₹{netProfit.toLocaleString()}</div>
                     <p className="text-xs text-muted-foreground">Net profit after all expenses</p>
                 </CardContent>
             </Card>
@@ -141,7 +141,7 @@ export default function PropertyDetailsPage() {
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="month" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${Number(value) / 1000}k`} />
+                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${Number(value) / 1000}k`} />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", radius: 'var(--radius)' }} />
                 <Legend iconSize={10} />
                 <Bar dataKey="income" fill="hsl(var(--accent))" name="Income" radius={[4, 4, 0, 0]} />
@@ -166,7 +166,7 @@ export default function PropertyDetailsPage() {
                     <Wallet className="h-6 w-6 text-muted-foreground"/>
                     <div className="grid gap-1">
                         <p className="text-sm font-medium leading-none">Rent</p>
-                        <p className="text-sm text-muted-foreground">${property.rentAmount.toLocaleString()} / month</p>
+                        <p className="text-sm text-muted-foreground">₹{property.rentAmount.toLocaleString()} / month</p>
                     </div>
                 </div>
                 {currentTenant ? (

@@ -159,7 +159,7 @@ const LedgerContent = () => {
                     <ArrowUp className="h-4 w-4 text-accent" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-accent">${totalIncome.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-accent">₹{totalIncome.toLocaleString()}</div>
                 </CardContent>
             </Card>
             <Card>
@@ -168,7 +168,7 @@ const LedgerContent = () => {
                     <ArrowDown className="h-4 w-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-destructive">${totalExpense.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-destructive">₹{totalExpense.toLocaleString()}</div>
                 </CardContent>
             </Card>
             <Card>
@@ -177,7 +177,7 @@ const LedgerContent = () => {
                     <Wallet className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
-                    <div className={`text-2xl font-bold ${netSavings >= 0 ? 'text-primary' : 'text-destructive'}`}>${netSavings.toLocaleString()}</div>
+                    <div className={`text-2xl font-bold ${netSavings >= 0 ? 'text-primary' : 'text-destructive'}`}>₹{netSavings.toLocaleString()}</div>
                 </CardContent>
             </Card>
         </div>
@@ -203,7 +203,7 @@ const LedgerContent = () => {
                                 </div>
                                 <div className="text-right">
                                     <p className={`font-semibold ${tx.type === 'income' ? 'text-accent' : 'text-destructive'}`}>
-                                        {tx.type === 'income' ? '+' : '-'}${tx.amount.toLocaleString()}
+                                        {tx.type === 'income' ? '+' : '-'}₹{tx.amount.toLocaleString()}
                                     </p>
                                     <Badge variant="outline">{tx.category}</Badge>
                                 </div>
