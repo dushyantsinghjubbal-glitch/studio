@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FirebaseProvider, useUser } from '@/firebase/provider';
 import { initializeFirebase } from '@/firebase';
-import { initiateAnonymousSignIn } from './non-blocking-login';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -25,9 +24,7 @@ function AuthGate({ children }: { children: ReactNode }) {
     const isPublicPath = publicPaths.includes(pathname);
 
     if (!user && !isPublicPath) {
-      // If no user and not a public path, it might be the initial anonymous sign-in process.
-      // The provider will show a loader until a user (even anonymous) is available.
-      // If the user is truly logged out and trying to access a protected page, they will be redirected.
+      // If no user and not a public path, redirect to login.
       router.push('/login');
     } else if (user && !user.isAnonymous && isPublicPath) {
       // If logged in user (not anon) is on a public path (like login), redirect to dashboard
@@ -38,7 +35,6 @@ function AuthGate({ children }: { children: ReactNode }) {
   const isPublicPath = publicPaths.includes(pathname);
 
   // Show a global loader while the auth state is being determined.
-  // Or if we are on a protected route and don't have a user yet (including anonymous).
   if (isUserLoading || (!user && !isPublicPath)) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -48,15 +44,19 @@ function AuthGate({ children }: { children: ReactNode }) {
   }
   
   // If a logged-in user hits a public page, show a redirecting message.
-  if (user && !user.isAnonymous && isPublicPath) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <p>Redirecting...</p>
-      </div>
-    );
+  if (user && isPublicPath) {
+     if(user.isAnonymous) {
+        // anons are allowed on public pages, they might be logging in.
+     } else {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <p>Redirecting...</p>
+            </div>
+        );
+     }
   }
 
-  // Once a user (anonymous or authenticated) is available, render the children.
+  // Once a user is available (or it's a public path), render the children.
   return <>{children}</>;
 }
 
@@ -66,19 +66,6 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     // Initialize Firebase on the client side, once per component mount.
     return initializeFirebase();
   }, []);
-
-  useEffect(() => {
-    const auth = getAuth(firebaseServices.firebaseApp);
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        // If there's no user, sign in anonymously. This allows public read access.
-        initiateAnonymousSignIn(auth);
-      }
-    });
-
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
-  }, [firebaseServices.firebaseApp]);
 
   return (
     <FirebaseProvider
