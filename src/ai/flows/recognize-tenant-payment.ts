@@ -23,7 +23,7 @@ export type RecognizeTransactionInput = z.infer<typeof RecognizeTransactionInput
 export const RecognizeTransactionOutputSchema = z.object({
   title: z.string().describe('A short, descriptive title for the transaction, like "Monthly Rent" or "Grocery Shopping".'),
   amount: z.number().describe("The total amount of the transaction found on the receipt."),
-  date: z.string().format('date-time').describe('The date of the transaction in ISO 8601 format (YYYY-MM-DD).'),
+  date: z.string().datetime().describe('The date of the transaction in ISO 8601 format (YYYY-MM-DD).'),
   category: z.enum(['Rent Received', 'Utilities', 'Maintenance', 'Salary', 'Groceries', 'Other']).describe('The category of the transaction.'),
 });
 export type RecognizeTransactionOutput = z.infer<typeof RecognizeTransactionOutputSchema>;
