@@ -36,7 +36,7 @@ const prompt = ai.definePrompt({
   name: 'recognizeTransactionPrompt',
   input: {schema: RecognizeTransactionInputSchema},
   output: {schema: RecognizeTransactionOutputSchema},
-  prompt: `You are an expert financial assistant for an app called Expro. Your task is to extract transaction details from a user-uploaded receipt image.
+  prompt: `You are an expert financial assistant for an app called FinProp. Your task is to extract transaction details from a user-uploaded receipt image.
 
 Context provided by user: {{{context}}}
 

@@ -153,7 +153,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <title>Expro - Finance Manager</title>
+        <title>FinProp - Finance Manager</title>
         <meta name="description" content="A simple app to manage rental properties and finances." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -167,7 +167,7 @@ export default function RootLayout({
                       <SidebarHeader>
                           <div className="flex items-center gap-2 p-2">
                               <BotMessageSquare className="h-8 w-8 text-primary" />
-                              <span className="text-2xl font-bold tracking-tight">Expro</span>
+                              <span className="text-2xl font-bold tracking-tight">FinProp</span>
                           </div>
                       </SidebarHeader>
                       <SidebarContent>
