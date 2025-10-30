@@ -31,9 +31,9 @@ function AuthGate({ children }: { children: ReactNode }) {
     }
   }, [user, isUserLoading, router, pathname, isPublicPath]);
 
-  // Show a global loader while auth state is being determined,
-  // or if we are about to redirect.
-  if (isUserLoading || (!user && !isPublicPath)) {
+  // Show a global loader while auth state is being determined.
+  // This is the critical fix: we do not render children until loading is complete.
+  if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Loading...</p>
@@ -41,7 +41,16 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
   
-  // If a logged-in (non-anonymous) user hits a public page, show a redirecting message.
+  // If we are about to redirect away from a private page, show a loading indicator.
+  if (!user && !isPublicPath) {
+     return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  // If a logged-in user hits a public page, show a redirecting message.
   if (user && !user.isAnonymous && isPublicPath) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
@@ -50,7 +59,7 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
 
-  // Once a user is available (or it's a public path and loading is finished), render the children.
+  // Once checks are passed, render the children.
   return <>{children}</>;
 }
 
