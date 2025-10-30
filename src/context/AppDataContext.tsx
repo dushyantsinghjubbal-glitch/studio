@@ -1,9 +1,10 @@
 'use client';
 
-import React, { createContext, ReactNode, useEffect } from 'react';
+import React, { createContext, ReactNode, useEffect, useState } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { usePathname } from 'next/navigation';
 
 export type Property = {
     id: string;
@@ -154,12 +155,32 @@ export const AppDataContext = createContext<AppDataContextProps>({
     error: null,
 });
 
+const transactionPages = ['/', '/ledger', '/properties/[propertyId]'];
+
 export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const firestore = useFirestore();
+    const pathname = usePathname();
+    
+    const [shouldFetchTransactions, setShouldFetchTransactions] = useState(false);
+
+    useEffect(() => {
+        // Basic path matching. For /[propertyId], we can just check the start.
+        const isOnTxPage = transactionPages.some(p => {
+            if (p.includes('[propertyId]')) {
+                return pathname.startsWith('/properties/');
+            }
+            return p === pathname;
+        });
+        setShouldFetchTransactions(isOnTxPage);
+    }, [pathname]);
+
 
     const tenantsQuery = useMemoFirebase(() => collection(firestore, 'tenants').withConverter(tenantConverter), [firestore]);
     const propertiesQuery = useMemoFirebase(() => collection(firestore, 'properties').withConverter(propertyConverter), [firestore]);
-    const transactionsQuery = useMemoFirebase(() => collection(firestore, 'transactions').withConverter(transactionConverter), [firestore]);
+    const transactionsQuery = useMemoFirebase(() => {
+        if (!shouldFetchTransactions) return null;
+        return collection(firestore, 'transactions').withConverter(transactionConverter);
+    }, [firestore, shouldFetchTransactions]);
 
     const { data: tenants = [], isLoading: tenantsLoading, error: tenantsError } = useCollection<Tenant>(tenantsQuery);
     const { data: properties = [], isLoading: propertiesLoading, error: propertiesError } = useCollection<Property>(propertiesQuery);
