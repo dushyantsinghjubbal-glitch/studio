@@ -17,11 +17,10 @@ function AuthGate({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const isPublicPath = publicPaths.includes(pathname);
 
   useEffect(() => {
     if (isUserLoading) return; // Wait for user to be loaded
-
-    const isPublicPath = publicPaths.includes(pathname);
 
     if (!user && !isPublicPath) {
       // If no user and not a public path, redirect to login.
@@ -30,11 +29,10 @@ function AuthGate({ children }: { children: ReactNode }) {
       // If logged in user (not anon) is on a public path (like login), redirect to dashboard
       router.push('/');
     }
-  }, [user, isUserLoading, router, pathname]);
-  
-  const isPublicPath = publicPaths.includes(pathname);
+  }, [user, isUserLoading, router, pathname, isPublicPath]);
 
-  // Show a global loader while the auth state is being determined.
+  // Show a global loader while auth state is being determined,
+  // or if we are about to redirect.
   if (isUserLoading || (!user && !isPublicPath)) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -43,20 +41,16 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
   
-  // If a logged-in user hits a public page, show a redirecting message.
-  if (user && isPublicPath) {
-     if(user.isAnonymous) {
-        // anons are allowed on public pages, they might be logging in.
-     } else {
-        return (
-            <div className="flex h-screen w-full items-center justify-center">
-                <p>Redirecting...</p>
-            </div>
-        );
-     }
+  // If a logged-in (non-anonymous) user hits a public page, show a redirecting message.
+  if (user && !user.isAnonymous && isPublicPath) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <p>Redirecting...</p>
+        </div>
+    );
   }
 
-  // Once a user is available (or it's a public path), render the children.
+  // Once a user is available (or it's a public path and loading is finished), render the children.
   return <>{children}</>;
 }
 
