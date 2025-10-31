@@ -25,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
 const transactionSchema = z.object({
@@ -43,10 +44,11 @@ const transactionSchema = z.object({
 type TransactionFormValues = z.infer<typeof transactionSchema>;
 
 const LedgerContent = () => {
-  const { transactions, properties, tenants, addTransaction, loading, isAddTransactionOpen, setAddTransactionOpen, isScanReceiptOpen, setScanReceiptOpen } = useContext(AppDataContext);
+  const { transactions, properties, tenants, addTransaction, updateTransaction, removeTransaction, loading, isAddTransactionOpen, setAddTransactionOpen, isScanReceiptOpen, setScanReceiptOpen } = useContext(AppDataContext);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractedData, setExtractedData] = useState<Partial<TransactionFormValues> | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const { toast } = useToast();
 
   const form = useForm<TransactionFormValues>({
@@ -59,7 +61,11 @@ const LedgerContent = () => {
 
   useEffect(() => {
     if (extractedData) {
-      form.reset(extractedData);
+      form.reset({
+        ...form.getValues(),
+        ...extractedData,
+        date: extractedData.date ? new Date(extractedData.date) : new Date(),
+      });
       setScanReceiptOpen(false);
       setAddTransactionOpen(true);
     }
@@ -74,6 +80,31 @@ const LedgerContent = () => {
     });
   };
 
+  const openTransactionForm = (tx: Transaction | null) => {
+    setEditingTransaction(tx);
+    if (tx) {
+        form.reset({
+            ...tx,
+            date: new Date(tx.date),
+        });
+    } else {
+        form.reset({
+            title: '',
+            amount: 0,
+            type: 'expense',
+            category: 'Other',
+            date: new Date(),
+            notes: '',
+            receipt: undefined,
+            propertyId: '',
+            tenantId: '',
+            merchant: '',
+        });
+    }
+    setAddTransactionOpen(true);
+  };
+
+
   const handleAiSubmit = async () => {
       if (!selectedFile) return;
       setIsProcessing(true);
@@ -81,13 +112,13 @@ const LedgerContent = () => {
 
       try {
           const photoDataUri = await fileToDataUri(selectedFile);
-          const input: RecognizeTransactionInput = { photoDataUri, context: "Extract transaction details from this receipt." };
+          const input: RecognizeTransactionInput = { photoDataUri, context: "Extract transaction details from this receipt. Determine if it is income (like rent) or an expense." };
           const result = await recognizeTransaction(input);
-
+          
           setExtractedData({
               title: result.title,
               amount: result.amount,
-              date: new Date(result.date),
+              date: result.date ? new Date(result.date) : new Date(),
               category: result.category,
               type: result.category === 'Rent Received' || result.category === 'Salary' ? 'income' : 'expense',
               merchant: result.merchant,
@@ -104,13 +135,28 @@ const LedgerContent = () => {
   };
 
   const handleFormSubmit = async (data: TransactionFormValues) => {
-      await addTransaction({
-          ...data,
-          date: data.date.toISOString(),
-      });
-      toast({ title: 'Transaction Saved', description: 'Your transaction has been recorded.' });
+      if (editingTransaction) {
+          await updateTransaction({
+              ...editingTransaction,
+              ...data,
+              date: data.date.toISOString(),
+          });
+          toast({ title: 'Transaction Updated', description: 'Your transaction has been updated.' });
+      } else {
+          await addTransaction({
+              ...data,
+              date: data.date.toISOString(),
+          });
+          toast({ title: 'Transaction Saved', description: 'Your transaction has been recorded.' });
+      }
       setAddTransactionOpen(false);
+      setEditingTransaction(null);
       form.reset();
+  };
+
+  const handleRemoveTransaction = (transactionId: string) => {
+    removeTransaction(transactionId);
+    toast({ variant: 'destructive', title: 'Transaction Removed' });
   };
   
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
@@ -200,11 +246,48 @@ const LedgerContent = () => {
                                         <p className="text-sm text-muted-foreground">{format(new Date(tx.date), 'PPP')}</p>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <p className={`font-semibold ${tx.type === 'income' ? 'text-accent' : 'text-destructive'}`}>
-                                        {tx.type === 'income' ? '+' : '-'}₹{tx.amount.toLocaleString()}
-                                    </p>
-                                    <Badge variant="outline">{tx.category}</Badge>
+                                <div className="flex items-center gap-2">
+                                    <div className="text-right">
+                                        <p className={`font-semibold ${tx.type === 'income' ? 'text-accent' : 'text-destructive'}`}>
+                                            {tx.type === 'income' ? '+' : '-'}₹{tx.amount.toLocaleString()}
+                                        </p>
+                                        <Badge variant="outline">{tx.category}</Badge>
+                                    </div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => openTransactionForm(tx)}>
+                                                <Edit className="mr-2 h-4 w-4" />
+                                                <span>Edit</span>
+                                            </DropdownMenuItem>
+                                             <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        <span>Delete</span>
+                                                    </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This will permanently delete the transaction: "{tx.title}".
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleRemoveTransaction(tx.id)} className="bg-red-600 hover:bg-red-700">
+                                                            Yes, delete
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
                             </div>
                         ))}
@@ -232,7 +315,10 @@ const LedgerContent = () => {
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setScanReceiptOpen(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => {
+                      setScanReceiptOpen(false);
+                      setSelectedFile(null);
+                    }}>Cancel</Button>
                     <Button onClick={handleAiSubmit} disabled={!selectedFile || isProcessing}>
                         {isProcessing ? 'Analyzing...' : 'Extract Details'}
                     </Button>
@@ -241,12 +327,19 @@ const LedgerContent = () => {
         </Dialog>
 
         {/* Manual Transaction Form Dialog */}
-        <Dialog open={isAddTransactionOpen} onOpenChange={setAddTransactionOpen}>
+        <Dialog open={isAddTransactionOpen} onOpenChange={(isOpen) => {
+            setAddTransactionOpen(isOpen);
+            if (!isOpen) {
+                setEditingTransaction(null);
+                setExtractedData(null);
+                form.reset();
+            }
+        }}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>{extractedData ? 'Confirm Transaction' : 'Add Transaction'}</DialogTitle>
+                    <DialogTitle>{editingTransaction ? 'Edit Transaction' : (extractedData ? 'Confirm Transaction' : 'Add Transaction')}</DialogTitle>
                     <DialogDescription>
-                        {extractedData ? 'Review the details extracted by the AI and save.' : 'Fill in the details for the new transaction.'}
+                        {editingTransaction ? 'Update the details for your transaction.' : (extractedData ? 'Review the details extracted by the AI and save.' : 'Fill in the details for the new transaction.')}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-6 -mx-6">

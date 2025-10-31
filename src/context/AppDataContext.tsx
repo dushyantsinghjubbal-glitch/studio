@@ -3,7 +3,7 @@
 import React, { createContext, ReactNode, useEffect, useState } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { usePathname } from 'next/navigation';
 
 export type Property = {
@@ -111,11 +111,12 @@ const tenantConverter = {
 };
 
 const transactionConverter = {
-    toFirestore: (transaction: Omit<Transaction, 'id'>) => {
+    toFirestore: (transaction: Omit<Transaction, 'id'> | Transaction) => {
         const data = {
             ...transaction,
             propertyId: transaction.propertyId || null,
             tenantId: transaction.tenantId || null,
+            merchant: transaction.merchant || null,
         };
         return data;
     },
@@ -139,6 +140,8 @@ interface AppDataContextProps {
     removeProperty: (propertyId: string) => Promise<void>;
     transactions: Transaction[];
     addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<string | undefined>;
+    updateTransaction: (transaction: Transaction) => Promise<void>;
+    removeTransaction: (transactionId: string) => Promise<void>;
     loading: boolean;
     error: any;
     isAddTransactionOpen: boolean;
@@ -158,6 +161,8 @@ export const AppDataContext = createContext<AppDataContextProps>({
     removeProperty: async () => {},
     transactions: [],
     addTransaction: async () => { return undefined; },
+    updateTransaction: async () => {},
+    removeTransaction: async () => {},
     loading: true,
     error: null,
     isAddTransactionOpen: false,
@@ -267,6 +272,16 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         return docRef?.id;
     };
 
+    const updateTransaction = async (transactionData: Transaction) => {
+        const docRef = doc(firestore, 'transactions', transactionData.id).withConverter(transactionConverter);
+        updateDocumentNonBlocking(docRef, transactionData);
+    };
+
+    const removeTransaction = async (transactionId: string) => {
+        const docRef = doc(firestore, 'transactions', transactionId);
+        deleteDocumentNonBlocking(docRef);
+    };
+
 
     const value = {
         tenants: tenants ?? [],
@@ -279,6 +294,8 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         removeProperty,
         transactions: transactions ?? [],
         addTransaction,
+        updateTransaction,
+        removeTransaction,
         loading: isUserLoading || tenantsLoading || propertiesLoading || transactionsLoading,
         error: tenantsError || propertiesError || transactionsError,
         isAddTransactionOpen,
