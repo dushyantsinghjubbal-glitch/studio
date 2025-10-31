@@ -112,10 +112,12 @@ const tenantConverter = {
 
 const transactionConverter = {
     toFirestore: (transaction: Omit<Transaction, 'id'>) => {
-        return {
+        const data = {
             ...transaction,
-            date: transaction.date,
+            propertyId: transaction.propertyId || null,
+            tenantId: transaction.tenantId || null,
         };
+        return data;
     },
     fromFirestore: (snapshot: any, options: any): Transaction => {
         const data = snapshot.data(options);
@@ -139,6 +141,10 @@ interface AppDataContextProps {
     addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<string | undefined>;
     loading: boolean;
     error: any;
+    isAddTransactionOpen: boolean;
+    setAddTransactionOpen: (open: boolean) => void;
+    isScanReceiptOpen: boolean;
+    setScanReceiptOpen: (open: boolean) => void;
 }
 
 export const AppDataContext = createContext<AppDataContextProps>({
@@ -154,6 +160,10 @@ export const AppDataContext = createContext<AppDataContextProps>({
     addTransaction: async () => { return undefined; },
     loading: true,
     error: null,
+    isAddTransactionOpen: false,
+    setAddTransactionOpen: () => {},
+    isScanReceiptOpen: false,
+    setScanReceiptOpen: () => {},
 });
 
 const transactionPages = ['/', '/ledger', '/properties/[propertyId]'];
@@ -164,6 +174,9 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const pathname = usePathname();
     
     const [shouldFetchTransactions, setShouldFetchTransactions] = useState(false);
+    const [isAddTransactionOpen, setAddTransactionOpen] = useState(false);
+    const [isScanReceiptOpen, setScanReceiptOpen] = useState(false);
+
 
     useEffect(() => {
         const isOnTxPage = transactionPages.some(p => {
@@ -267,6 +280,10 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         addTransaction,
         loading: isUserLoading || tenantsLoading || propertiesLoading || transactionsLoading,
         error: tenantsError || propertiesError || transactionsError,
+        isAddTransactionOpen,
+        setAddTransactionOpen,
+        isScanReceiptOpen,
+        setScanReceiptOpen,
     };
 
     return (

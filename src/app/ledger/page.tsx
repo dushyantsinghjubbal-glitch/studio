@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useContext, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { PlusCircle, Upload, Edit, Trash2, MoreVertical, Search, Filter, FileDown, ArrowDown, ArrowUp, Briefcase, Droplets, Wrench, HandCoins, ShoppingCart, CircleHelp, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,10 +43,7 @@ const transactionSchema = z.object({
 type TransactionFormValues = z.infer<typeof transactionSchema>;
 
 const LedgerContent = () => {
-  const { transactions, properties, tenants, addTransaction, loading } = useContext(AppDataContext);
-  const searchParams = useSearchParams();
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isAiOpen, setIsAiOpen] = useState(false);
+  const { transactions, properties, tenants, addTransaction, loading, isAddTransactionOpen, setAddTransactionOpen, isScanReceiptOpen, setScanReceiptOpen } = useContext(AppDataContext);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -63,21 +59,12 @@ const LedgerContent = () => {
   });
 
   useEffect(() => {
-    const action = searchParams.get('action');
-    if (action === 'add') {
-      setIsFormOpen(true);
-    } else if (action === 'scan') {
-      setIsAiOpen(true);
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
     if (extractedData) {
       form.reset(extractedData);
-      setIsAiOpen(false);
-      setIsFormOpen(true);
+      setScanReceiptOpen(false);
+      setAddTransactionOpen(true);
     }
-  }, [extractedData, form]);
+  }, [extractedData, form, setScanReceiptOpen, setAddTransactionOpen]);
 
   const fileToDataUri = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -111,7 +98,7 @@ const LedgerContent = () => {
       } catch (error) {
           console.error("AI recognition failed:", error);
           toast({ variant: 'destructive', title: 'AI Error', description: 'Could not extract details from the receipt.' });
-          setIsAiOpen(false);
+          setScanReceiptOpen(false);
       } finally {
           setIsProcessing(false);
       }
@@ -123,7 +110,7 @@ const LedgerContent = () => {
           date: data.date.toISOString(),
       });
       toast({ title: 'Transaction Saved', description: 'Your transaction has been recorded.' });
-      setIsFormOpen(false);
+      setAddTransactionOpen(false);
       form.reset();
   };
   
@@ -228,7 +215,7 @@ const LedgerContent = () => {
         </Card>
 
         {/* AI Receipt Scanner Dialog */}
-        <Dialog open={isAiOpen} onOpenChange={setIsAiOpen}>
+        <Dialog open={isScanReceiptOpen} onOpenChange={setScanReceiptOpen}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Scan Receipt with AI</DialogTitle>
@@ -248,7 +235,7 @@ const LedgerContent = () => {
                     {previewUrl && <Image src={previewUrl} alt="Receipt preview" width={400} height={400} className="rounded-md object-contain" />}
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsAiOpen(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => setScanReceiptOpen(false)}>Cancel</Button>
                     <Button onClick={handleAiSubmit} disabled={!selectedFile || isProcessing}>
                         {isProcessing ? 'Analyzing...' : 'Extract Details'}
                     </Button>
@@ -257,7 +244,7 @@ const LedgerContent = () => {
         </Dialog>
 
         {/* Manual Transaction Form Dialog */}
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <Dialog open={isAddTransactionOpen} onOpenChange={setAddTransactionOpen}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>{extractedData ? 'Confirm Transaction' : 'Add Transaction'}</DialogTitle>

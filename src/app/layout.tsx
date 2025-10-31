@@ -6,13 +6,14 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, Si
 import Link from 'next/link';
 import { Home, Users, Building, LogOut, Wallet, Plus, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AppDataProvider } from '@/context/AppDataContext';
+import { AppDataContext, AppDataProvider } from '@/context/AppDataContext';
 import { FirebaseClientProvider, useUser, useAuth } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { signOut } from 'firebase/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { usePathname, useRouter } from 'next/navigation';
+import { useContext } from 'react';
 
 function UserMenu() {
     const { user } = useUser();
@@ -70,6 +71,7 @@ function UserMenu() {
 function FloatingActionButton() {
   const router = useRouter();
   const pathname = usePathname();
+  const { setAddTransactionOpen, setScanReceiptOpen } = useContext(AppDataContext);
 
   const getFabContent = () => {
     switch (pathname) {
@@ -97,11 +99,11 @@ function FloatingActionButton() {
             </PopoverTrigger>
             <PopoverContent className="w-56 p-2 mb-2" align="end">
               <div className="grid gap-1">
-                <Button variant="ghost" className="justify-start" onClick={() => router.push('/ledger?action=add')}>
+                <Button variant="ghost" className="justify-start" onClick={() => setAddTransactionOpen(true)}>
                   <Wallet className="mr-2 h-4 w-4" />
                   Add Transaction
                 </Button>
-                <Button variant="ghost" className="justify-start" onClick={() => router.push('/ledger?action=scan')}>
+                <Button variant="ghost" className="justify-start" onClick={() => setScanReceiptOpen(true)}>
                   <Receipt className="mr-2 h-4 w-4" />
                   Scan Receipt
                 </Button>
