@@ -6,14 +6,288 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, Si
 import Link from 'next/link';
 import { Home, Users, Building, LogOut, Wallet, Plus, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AppDataContext, AppDataProvider } from '@/context/AppDataContext';
+import { AppDataContext, AppDataProvider, Transaction } from '@/context/AppDataContext';
 import { FirebaseClientProvider, useUser, useAuth } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { signOut } from 'firebase/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { usePathname, useRouter } from 'next/navigation';
-import { useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { recognizeTransaction, RecognizeTransactionInput } from '@/ai/flows/recognize-tenant-payment';
+import { Textarea } from '@/components/ui/textarea';
+
+
+const transactionSchema = z.object({
+    title: z.string().min(1, 'Title is required'),
+    amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
+    type: z.enum(['income', 'expense']),
+    category: z.enum(['Rent Received', 'Utilities', 'Maintenance', 'Salary', 'Groceries', 'Other']),
+    date: z.date(),
+    notes: z.string().optional(),
+    receipt: z.instanceof(File).optional(),
+    propertyId: z.string().optional(),
+    tenantId: z.string().optional(),
+    merchant: z.string().optional(),
+});
+
+type TransactionFormValues = z.infer<typeof transactionSchema>;
+
+
+function GlobalDialogs() {
+    const { 
+        properties, tenants, addTransaction, updateTransaction,
+        isAddTransactionOpen, setAddTransactionOpen, 
+        isScanReceiptOpen, setScanReceiptOpen, 
+        editingTransaction, setEditingTransaction,
+        extractedData, setExtractedData,
+    } = useContext(AppDataContext);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const { toast } = useToast();
+
+    const form = useForm<TransactionFormValues>({
+        resolver: zodResolver(transactionSchema),
+        defaultValues: {
+            type: 'expense',
+            date: new Date(),
+        }
+    });
+
+    useEffect(() => {
+        if (isAddTransactionOpen && editingTransaction) {
+            form.reset({
+                ...editingTransaction,
+                date: new Date(editingTransaction.date),
+            });
+        } else if (isAddTransactionOpen && extractedData) {
+            form.reset({
+                ...form.getValues(),
+                ...extractedData,
+                date: extractedData.date ? new Date(extractedData.date) : new Date(),
+            });
+        } else if (!isAddTransactionOpen) {
+            setEditingTransaction(null);
+            setExtractedData(null);
+            form.reset({
+                type: 'expense',
+                date: new Date(),
+                title: '',
+                amount: 0,
+                category: 'Other',
+                notes: '',
+                receipt: undefined,
+                propertyId: '',
+                tenantId: '',
+                merchant: '',
+            });
+        }
+    }, [isAddTransactionOpen, editingTransaction, extractedData, form, setEditingTransaction, setExtractedData]);
+    
+    const fileToDataUri = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleAiSubmit = async () => {
+        if (!selectedFile) return;
+        setIsProcessing(true);
+        toast({ title: 'Analyzing Receipt...', description: 'The AI is extracting transaction details.' });
+
+        try {
+            const photoDataUri = await fileToDataUri(selectedFile);
+            const input: RecognizeTransactionInput = { photoDataUri, context: "Extract transaction details from this receipt. Determine if it is income (like rent) or an expense." };
+            const result = await recognizeTransaction(input);
+            
+            setExtractedData({
+                title: result.title,
+                amount: result.amount,
+                date: result.date ? new Date(result.date) : new Date(),
+                category: result.category,
+                type: result.category === 'Rent Received' || result.category === 'Salary' ? 'income' : 'expense',
+                merchant: result.merchant,
+            });
+            toast({ title: 'Success!', description: 'Please confirm the extracted details.' });
+            setScanReceiptOpen(false);
+            setAddTransactionOpen(true);
+        } catch (error) {
+            console.error("AI recognition failed:", error);
+            toast({ variant: 'destructive', title: 'AI Error', description: 'Could not extract details from the receipt.' });
+            setScanReceiptOpen(false);
+        } finally {
+            setIsProcessing(false);
+            setSelectedFile(null);
+        }
+    };
+
+    const handleFormSubmit = async (data: TransactionFormValues) => {
+        if (editingTransaction) {
+            await updateTransaction({
+                ...editingTransaction,
+                ...data,
+                date: data.date.toISOString(),
+            });
+            toast({ title: 'Transaction Updated', description: 'Your transaction has been updated.' });
+        } else {
+            await addTransaction({
+                ...data,
+                date: data.date.toISOString(),
+            });
+            toast({ title: 'Transaction Saved', description: 'Your transaction has been recorded.' });
+        }
+        setAddTransactionOpen(false);
+    };
+
+    return (
+        <>
+            {/* AI Receipt Scanner Dialog */}
+            <Dialog open={isScanReceiptOpen} onOpenChange={setScanReceiptOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Scan Receipt with AI</DialogTitle>
+                        <DialogDescription>Upload a receipt image and let AI extract the details for you.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid w-full items-center gap-1.5">
+                            <Label htmlFor="receipt-scan">Receipt Image</Label>
+                            <Input id="receipt-scan" type="file" accept="image/*" onChange={e => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                    setSelectedFile(file);
+                                }
+                            }} />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => {
+                        setScanReceiptOpen(false);
+                        setSelectedFile(null);
+                        }}>Cancel</Button>
+                        <Button onClick={handleAiSubmit} disabled={!selectedFile || isProcessing}>
+                            {isProcessing ? 'Analyzing...' : 'Extract Details'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Manual Transaction Form Dialog */}
+            <Dialog open={isAddTransactionOpen} onOpenChange={setAddTransactionOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{editingTransaction ? 'Edit Transaction' : (extractedData ? 'Confirm Transaction' : 'Add Transaction')}</DialogTitle>
+                        <DialogDescription>
+                            {editingTransaction ? 'Update the details for your transaction.' : (extractedData ? 'Review the details extracted by the AI and save.' : 'Fill in the details for the new transaction.')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-6 -mx-6">
+                        <div className="grid gap-2 px-6">
+                            <Label htmlFor="title">Title</Label>
+                            <Input id="title" {...form.register('title')} />
+                            {form.formState.errors.title && <p className="text-red-500 text-xs">{form.formState.errors.title.message}</p>}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 px-6">
+                            <div className="grid gap-2">
+                                <Label htmlFor="amount">Amount</Label>
+                                <Input id="amount" type="number" step="0.01" {...form.register('amount')} />
+                                {form.formState.errors.amount && <p className="text-red-500 text-xs">{form.formState.errors.amount.message}</p>}
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Type</Label>
+                                <Controller name="type" control={form.control} render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="income">Income</SelectItem>
+                                            <SelectItem value="expense">Expense</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )} />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 px-6">
+                            <div className="grid gap-2">
+                                <Label>Category</Label>
+                                <Controller name="category" control={form.control} render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Rent Received">Rent Received</SelectItem>
+                                            <SelectItem value="Utilities">Utilities</SelectItem>
+                                            <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                            <SelectItem value="Salary">Salary</SelectItem>
+                                            <SelectItem value="Groceries">Groceries</SelectItem>
+                                            <SelectItem value="Other">Other</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Date</Label>
+                                <Controller name="date" control={form.control} render={({ field }) => (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" className={cn('w-full justify-start text-left font-normal', !field.value && 'text-muted-foreground')}>
+                                                {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus/></PopoverContent>
+                                    </Popover>
+                                )} />
+                            </div>
+                        </div>
+                        <div className="grid gap-2 px-6">
+                            <Label>Related To (Optional)</Label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Controller name="propertyId" control={form.control} render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger><SelectValue placeholder="Property..."/></SelectTrigger>
+                                        <SelectContent>
+                                            {properties.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                )} />
+                                <Controller name="tenantId" control={form.control} render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger><SelectValue placeholder="Tenant..."/></SelectTrigger>
+                                        <SelectContent>
+                                            {tenants.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                )} />
+                            </div>
+                        </div>
+                        <div className="grid gap-2 px-6">
+                            <Label htmlFor="notes">Notes</Label>
+                            <Textarea id="notes" {...form.register('notes')} />
+                        </div>
+
+                        <DialogFooter className="px-6 pt-4 border-t mt-4">
+                            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                            <Button type="submit">Save Transaction</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+}
 
 function UserMenu() {
     const { user } = useUser();
@@ -202,6 +476,7 @@ export default function RootLayout({
                       </header>
                       {children}
                       <FloatingActionButton />
+                      <GlobalDialogs />
                   </SidebarInset>
               </SidebarProvider>
           </AppDataProvider>

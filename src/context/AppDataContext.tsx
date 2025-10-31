@@ -148,6 +148,10 @@ interface AppDataContextProps {
     setAddTransactionOpen: (open: boolean) => void;
     isScanReceiptOpen: boolean;
     setScanReceiptOpen: (open: boolean) => void;
+    editingTransaction: Transaction | null;
+    setEditingTransaction: (transaction: Transaction | null) => void;
+    extractedData: Partial<Transaction> | null;
+    setExtractedData: (data: Partial<Transaction> | null) => void;
 }
 
 export const AppDataContext = createContext<AppDataContextProps>({
@@ -169,6 +173,10 @@ export const AppDataContext = createContext<AppDataContextProps>({
     setAddTransactionOpen: () => {},
     isScanReceiptOpen: false,
     setScanReceiptOpen: () => {},
+    editingTransaction: null,
+    setEditingTransaction: () => {},
+    extractedData: null,
+    setExtractedData: () => {},
 });
 
 const pagesNeedingTransactions = ['/', '/ledger', '/properties/[propertyId]'];
@@ -183,6 +191,8 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     
     const [isAddTransactionOpen, setAddTransactionOpen] = useState(false);
     const [isScanReceiptOpen, setScanReceiptOpen] = useState(false);
+    const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+    const [extractedData, setExtractedData] = useState<Partial<Transaction> | null>(null);
 
     const isPage = (patterns: string[]) => {
         return patterns.some(p => {
@@ -194,9 +204,9 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         });
     }
 
-    const shouldFetchTransactions = isPage(pagesNeedingTransactions);
-    const shouldFetchTenants = isPage(pagesNeedingTenants);
-    const shouldFetchProperties = isPage(pagesNeedingProperties);
+    const shouldFetchTransactions = isPage(pagesNeedingTransactions) || isAddTransactionOpen || isScanReceiptOpen;
+    const shouldFetchTenants = isPage(pagesNeedingTenants) || isAddTransactionOpen;
+    const shouldFetchProperties = isPage(pagesNeedingProperties) || isAddTransactionOpen;
 
     // Only set up queries if a user is authenticated
     const tenantsQuery = useMemoFirebase(() => {
@@ -315,6 +325,10 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         setAddTransactionOpen,
         isScanReceiptOpen,
         setScanReceiptOpen,
+        editingTransaction,
+        setEditingTransaction,
+        extractedData,
+        setExtractedData,
     };
 
     return (
