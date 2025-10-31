@@ -112,12 +112,13 @@ const tenantConverter = {
 
 const transactionConverter = {
     toFirestore: (transaction: Omit<Transaction, 'id'> | Transaction) => {
-        const data = {
-            ...transaction,
-            propertyId: transaction.propertyId || null,
-            tenantId: transaction.tenantId || null,
-            merchant: transaction.merchant || null,
-        };
+        const data: any = { ...transaction };
+        // Ensure optional fields are handled correctly.
+        data.propertyId = transaction.propertyId || null;
+        data.tenantId = transaction.tenantId || null;
+        data.merchant = transaction.merchant || null;
+        // Don't store the File object in Firestore
+        delete data.receipt; 
         return data;
     },
     fromFirestore: (snapshot: any, options: any): Transaction => {
@@ -139,8 +140,8 @@ interface AppDataContextProps {
     updateProperty: (property: Property) => Promise<void>;
     removeProperty: (propertyId: string) => Promise<void>;
     transactions: Transaction[];
-    addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<string | undefined>;
-    updateTransaction: (transaction: Transaction) => Promise<void>;
+    addTransaction: (transaction: Omit<Transaction, 'id'> & { receipt?: File }) => Promise<string | undefined>;
+    updateTransaction: (transaction: Transaction & { receipt?: File }) => Promise<void>;
     removeTransaction: (transactionId: string) => Promise<void>;
     loading: boolean;
     error: any;
@@ -275,21 +276,19 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         deleteDocumentNonBlocking(propertyRef);
     };
 
-    const addTransaction = async (transactionData: Omit<Transaction, 'id'>) => {
+    const addTransaction = async (transactionData: Omit<Transaction, 'id'> & { receipt?: File }) => {
         const colRef = collection(firestore, 'transactions').withConverter(transactionConverter);
-        const dataToSave = {
-            ...transactionData,
-            propertyId: transactionData.propertyId || null,
-            tenantId: transactionData.tenantId || null,
-            merchant: transactionData.merchant || null,
-        };
-        const docRef = await addDocumentNonBlocking(colRef, dataToSave);
+        // The converter will handle removing the 'receipt' field if it exists
+        const docRef = await addDocumentNonBlocking(colRef, transactionData);
+        // TODO: Handle receipt file upload if present
         return docRef?.id;
     };
 
-    const updateTransaction = async (transactionData: Transaction) => {
+    const updateTransaction = async (transactionData: Transaction & { receipt?: File }) => {
         const docRef = doc(firestore, 'transactions', transactionData.id).withConverter(transactionConverter);
+         // The converter will handle removing the 'receipt' field if it exists
         updateDocumentNonBlocking(docRef, transactionData);
+        // TODO: Handle receipt file upload if present
     };
 
     const removeTransaction = async (transactionId: string) => {
