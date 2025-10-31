@@ -252,14 +252,14 @@ const LedgerContent = () => {
                         {extractedData ? 'Review the details extracted by the AI and save.' : 'Fill in the details for the new transaction.'}
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-4 py-4">
-                    <div className="grid gap-2">
+                <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-6 -mx-6">
+                    <div className="grid gap-2 px-6">
                         <Label htmlFor="title">Title</Label>
                         <Input id="title" {...form.register('title')} />
                         {form.formState.errors.title && <p className="text-red-500 text-xs">{form.formState.errors.title.message}</p>}
                     </div>
 
-                     <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-2 gap-4 px-6">
                         <div className="grid gap-2">
                             <Label htmlFor="amount">Amount</Label>
                             <Input id="amount" type="number" step="0.01" {...form.register('amount')} />
@@ -279,7 +279,7 @@ const LedgerContent = () => {
                         </div>
                     </div>
 
-                     <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-2 gap-4 px-6">
                         <div className="grid gap-2">
                             <Label>Category</Label>
                             <Controller name="category" control={form.control} render={({ field }) => (
@@ -310,7 +310,7 @@ const LedgerContent = () => {
                             )} />
                         </div>
                     </div>
-                     <div className="grid gap-2">
+                     <div className="grid gap-2 px-6">
                         <Label>Related To (Optional)</Label>
                         <div className="grid grid-cols-2 gap-4">
                             <Controller name="propertyId" control={form.control} render={({ field }) => (
@@ -331,12 +331,12 @@ const LedgerContent = () => {
                             )} />
                         </div>
                     </div>
-                     <div className="grid gap-2">
+                     <div className="grid gap-2 px-6">
                         <Label htmlFor="notes">Notes</Label>
                         <Textarea id="notes" {...form.register('notes')} />
                     </div>
 
-                    <DialogFooter>
+                    <DialogFooter className="px-6 pt-4 border-t mt-4">
                         <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
                         <Button type="submit">Save Transaction</Button>
                     </DialogFooter>
@@ -355,5 +355,3 @@ export default function LedgerPage() {
         </Suspense>
     )
 }
-
-    
