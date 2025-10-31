@@ -19,11 +19,12 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { recognizeTransaction, RecognizeTransactionInput } from '@/ai/flows/recognize-tenant-payment';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,7 +48,7 @@ type TransactionFormValues = z.infer<typeof transactionSchema>;
 
 function GlobalDialogs() {
     const { 
-        properties, tenants, addTransaction, updateTransaction,
+        properties, tenants, transactions, addTransaction, updateTransaction,
         isAddTransactionOpen, setAddTransactionOpen, 
         isScanReceiptOpen, setScanReceiptOpen, 
         editingTransaction, setEditingTransaction,
@@ -56,6 +57,9 @@ function GlobalDialogs() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const { toast } = useToast();
+    const [isDuplicateAlertOpen, setDuplicateAlertOpen] = useState(false);
+    const [stagedTransaction, setStagedTransaction] = useState<TransactionFormValues | null>(null);
+
 
     const form = useForm<TransactionFormValues>({
         resolver: zodResolver(transactionSchema),
@@ -103,6 +107,13 @@ function GlobalDialogs() {
             reader.readAsDataURL(file);
         });
     };
+    
+    const checkForDuplicates = (data: Partial<TransactionFormValues>): Transaction | undefined => {
+        return transactions.find(t => 
+            t.amount === data.amount && 
+            data.date && isSameDay(new Date(t.date), data.date)
+        );
+    }
 
     const handleAiSubmit = async () => {
         if (!selectedFile) return;
@@ -114,28 +125,47 @@ function GlobalDialogs() {
             const input: RecognizeTransactionInput = { photoDataUri, context: "Extract transaction details from this receipt. Determine if it is income (like rent) or an expense." };
             const result = await recognizeTransaction(input);
             
-            setExtractedData({
+            const extracted = {
                 title: result.title,
                 amount: result.amount,
                 date: result.date ? new Date(result.date) : new Date(),
                 category: result.category,
                 type: result.category === 'Rent Received' || result.category === 'Salary' ? 'income' : 'expense',
                 merchant: result.merchant,
-            });
-            toast({ title: 'Success!', description: 'Please confirm the extracted details.' });
-            setScanReceiptOpen(false);
-            setAddTransactionOpen(true);
+            };
+
+            const duplicate = checkForDuplicates(extracted);
+            if (duplicate) {
+                setStagedTransaction(extracted as TransactionFormValues);
+                setDuplicateAlertOpen(true);
+            } else {
+                setExtractedData(extracted);
+                setScanReceiptOpen(false);
+                setAddTransactionOpen(true);
+            }
         } catch (error) {
             console.error("AI recognition failed:", error);
             toast({ variant: 'destructive', title: 'AI Error', description: 'Could not extract details from the receipt.' });
-            setScanReceiptOpen(false);
         } finally {
             setIsProcessing(false);
             setSelectedFile(null);
+            if(!isDuplicateAlertOpen) setScanReceiptOpen(false);
         }
     };
 
     const handleFormSubmit = async (data: TransactionFormValues) => {
+        if (!editingTransaction) {
+            const duplicate = checkForDuplicates(data);
+            if (duplicate) {
+                setStagedTransaction(data);
+                setDuplicateAlertOpen(true);
+                return;
+            }
+        }
+        await saveTransaction(data);
+    };
+
+    const saveTransaction = async (data: TransactionFormValues) => {
         if (editingTransaction) {
             await updateTransaction({
                 ...editingTransaction,
@@ -151,7 +181,24 @@ function GlobalDialogs() {
             toast({ title: 'Transaction Saved', description: 'Your transaction has been recorded.' });
         }
         setAddTransactionOpen(false);
-    };
+        setStagedTransaction(null);
+    }
+    
+    const handleDuplicateConfirmation = async () => {
+        if (stagedTransaction) {
+            // If it came from AI scan
+            if (isScanReceiptOpen) {
+                 setExtractedData(stagedTransaction);
+                 setScanReceiptOpen(false);
+                 setAddTransactionOpen(true);
+            } else { // From manual entry
+                await saveTransaction(stagedTransaction);
+            }
+        }
+        setDuplicateAlertOpen(false);
+        setStagedTransaction(null);
+    }
+
 
     return (
         <>
@@ -184,10 +231,26 @@ function GlobalDialogs() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            
+            {/* Duplicate Transaction Alert */}
+            <AlertDialog open={isDuplicateAlertOpen} onOpenChange={setDuplicateAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Possible Duplicate Transaction</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This transaction looks similar to one you've already added. Are you sure you want to add it?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setStagedTransaction(null)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDuplicateConfirmation}>Add Anyway</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
 
             {/* Manual Transaction Form Dialog */}
             <Dialog open={isAddTransactionOpen} onOpenChange={(open) => {
-                // If the form was opened for confirming extracted data, don't close it on outside click
                 if (extractedData && !open) {
                     return;
                 }
@@ -195,13 +258,11 @@ function GlobalDialogs() {
             }}>
                 <DialogContent className="sm:max-w-md" 
                     onInteractOutside={(e) => {
-                        // Prevent closing when confirming extracted data
                         if (extractedData) {
                             e.preventDefault();
                         }
                     }}
                     onEscapeKeyDown={(e) => {
-                        // Prevent closing with Escape key when confirming
                         if (extractedData) {
                             e.preventDefault();
                         }
@@ -298,7 +359,12 @@ function GlobalDialogs() {
                         </div>
 
                         <DialogFooter className="px-6 pt-4 border-t mt-4">
-                            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                             <Button type="button" variant="outline" onClick={() => {
+                                if (extractedData) {
+                                    setExtractedData(null);
+                                }
+                                setAddTransactionOpen(false);
+                            }}>Cancel</Button>
                             <Button type="submit">Save Transaction</Button>
                         </DialogFooter>
                     </form>
@@ -506,5 +572,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    
