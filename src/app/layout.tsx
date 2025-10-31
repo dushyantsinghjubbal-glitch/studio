@@ -140,7 +140,7 @@ function NavMenu() {
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Tenants" onClick={() => setOpenmobile(false)}>
+                <SidebarMenuButton asChild tooltip="Tenants" onClick={() => setOpenMobile(false)}>
                     <Link href="/tenants">
                         <Users />
                         <span>Tenants</span>
