@@ -52,7 +52,7 @@ function UserMenu() {
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10 border-2 border-primary">
-                        <AvatarImage src={`https://i.pravatar.cc/150?u=${user.uid}`} alt={user.displayName || user.email || 'User'} />
+                        <AvatarImage src={`https://api.dicebear.com/8.x/adventurer/svg?seed=${user.uid}`} alt={user.displayName || user.email || 'User'} />
                         <AvatarFallback>{getInitials(user.displayName, user.email)}</AvatarFallback>
                     </Avatar>
                 </Button>
