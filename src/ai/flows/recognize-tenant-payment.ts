@@ -23,7 +23,7 @@ export type RecognizeTransactionInput = z.infer<typeof RecognizeTransactionInput
 const RecognizeTransactionOutputSchema = z.object({
   title: z.string().describe('A short, descriptive title for the transaction, like "Monthly Rent" or "Grocery Shopping".'),
   amount: z.number().describe("The total amount of the transaction found on the receipt."),
-  date: z.string().datetime().describe('The date of the transaction in ISO 8601 format (YYYY-MM-DD).'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format.").describe('The date of the transaction in YYYY-MM-DD format.'),
   category: z.enum(['Rent Received', 'Utilities', 'Maintenance', 'Salary', 'Groceries', 'Other']).describe('The category of the transaction.'),
 });
 export type RecognizeTransactionOutput = z.infer<typeof RecognizeTransactionOutputSchema>;
@@ -40,13 +40,13 @@ const prompt = ai.definePrompt({
 
 Context provided by user: {{{context}}}
 
-Based on the context and the content of the receipt image, extract the following information:
-1.  **Title**: Create a brief, clear title for the transaction.
-2.  **Amount**: Find the total amount paid.
-3.  **Date**: Find the date of the transaction and format it as YYYY-MM-DD.
-4.  **Category**: Categorize the transaction into one of the following: 'Rent Received', 'Utilities', 'Maintenance', 'Salary', 'Groceries', 'Other'.
+Based on the context and the content of the receipt image, extract the following information and return it in the specified JSON format.
+1.  **title**: Create a brief, clear title for the transaction.
+2.  **amount**: Find the total numerical amount paid.
+3.  **date**: Find the date of the transaction and format it as YYYY-MM-DD.
+4.  **category**: Categorize the transaction into one of the following: 'Rent Received', 'Utilities', 'Maintenance', 'Salary', 'Groceries', 'Other'.
 
-Analyze the attached image and return the extracted details in the specified format.
+Analyze the attached image.
 
 Receipt Image: {{media url=photoDataUri}}`,
 });
