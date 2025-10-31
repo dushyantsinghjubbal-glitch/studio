@@ -261,6 +261,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
             ...transactionData,
             propertyId: transactionData.propertyId || null,
             tenantId: transactionData.tenantId || null,
+            merchant: transactionData.merchant || null,
         };
         const docRef = await addDocumentNonBlocking(colRef, dataToSave);
         return docRef?.id;
