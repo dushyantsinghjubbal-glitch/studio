@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useContext, useEffect, Suspense } from 'react';
@@ -60,16 +59,34 @@ const LedgerContent = () => {
   });
 
   useEffect(() => {
-    if (extractedData) {
-      form.reset({
-        ...form.getValues(),
-        ...extractedData,
-        date: extractedData.date ? new Date(extractedData.date) : new Date(),
-      });
-      setScanReceiptOpen(false);
-      setAddTransactionOpen(true);
+    if (isAddTransactionOpen && editingTransaction) {
+        form.reset({
+            ...editingTransaction,
+            date: new Date(editingTransaction.date),
+        });
+    } else if (isAddTransactionOpen && extractedData) {
+        form.reset({
+            ...form.getValues(),
+            ...extractedData,
+            date: extractedData.date ? new Date(extractedData.date) : new Date(),
+        });
+    } else if (!isAddTransactionOpen) {
+        setEditingTransaction(null);
+        setExtractedData(null);
+        form.reset({
+            type: 'expense',
+            date: new Date(),
+            title: '',
+            amount: 0,
+            category: 'Other',
+            notes: '',
+            receipt: undefined,
+            propertyId: '',
+            tenantId: '',
+            merchant: '',
+        });
     }
-  }, [extractedData, form, setScanReceiptOpen, setAddTransactionOpen]);
+  }, [isAddTransactionOpen, editingTransaction, extractedData, form]);
 
   const fileToDataUri = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -82,25 +99,6 @@ const LedgerContent = () => {
 
   const openTransactionForm = (tx: Transaction | null) => {
     setEditingTransaction(tx);
-    if (tx) {
-        form.reset({
-            ...tx,
-            date: new Date(tx.date),
-        });
-    } else {
-        form.reset({
-            title: '',
-            amount: 0,
-            type: 'expense',
-            category: 'Other',
-            date: new Date(),
-            notes: '',
-            receipt: undefined,
-            propertyId: '',
-            tenantId: '',
-            merchant: '',
-        });
-    }
     setAddTransactionOpen(true);
   };
 
@@ -124,13 +122,15 @@ const LedgerContent = () => {
               merchant: result.merchant,
           });
           toast({ title: 'Success!', description: 'Please confirm the extracted details.' });
-          
+          setScanReceiptOpen(false);
+          setAddTransactionOpen(true);
       } catch (error) {
           console.error("AI recognition failed:", error);
           toast({ variant: 'destructive', title: 'AI Error', description: 'Could not extract details from the receipt.' });
           setScanReceiptOpen(false);
       } finally {
           setIsProcessing(false);
+          setSelectedFile(null);
       }
   };
 
@@ -150,8 +150,6 @@ const LedgerContent = () => {
           toast({ title: 'Transaction Saved', description: 'Your transaction has been recorded.' });
       }
       setAddTransactionOpen(false);
-      setEditingTransaction(null);
-      form.reset();
   };
 
   const handleRemoveTransaction = (transactionId: string) => {
@@ -327,14 +325,7 @@ const LedgerContent = () => {
         </Dialog>
 
         {/* Manual Transaction Form Dialog */}
-        <Dialog open={isAddTransactionOpen} onOpenChange={(isOpen) => {
-            setAddTransactionOpen(isOpen);
-            if (!isOpen) {
-                setEditingTransaction(null);
-                setExtractedData(null);
-                form.reset();
-            }
-        }}>
+        <Dialog open={isAddTransactionOpen} onOpenChange={setAddTransactionOpen}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>{editingTransaction ? 'Edit Transaction' : (extractedData ? 'Confirm Transaction' : 'Add Transaction')}</DialogTitle>
@@ -445,3 +436,5 @@ export default function LedgerPage() {
         </Suspense>
     )
 }
+
+    
