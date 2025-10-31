@@ -1,7 +1,6 @@
 
 'use client';
 
-import { Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -40,7 +39,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 
-function LoginContent() {
+export default function LoginPage() {
   const { toast } = useToast();
   const auth = useAuth();
   const router = useRouter();
@@ -129,7 +128,7 @@ function LoginContent() {
                 <CardContent>
                 <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="grid gap-4">
                     <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email-login">Email</Label>
                     <Input
                         id="email-login"
                         type="email"
@@ -144,7 +143,7 @@ function LoginContent() {
                     </div>
                     <div className="grid gap-2">
                     <div className="flex items-center">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password-login">Password</Label>
                     </div>
                     <Input id="password-login" type="password" {...loginForm.register('password')} />
                     {loginForm.formState.errors.password && (
@@ -171,7 +170,7 @@ function LoginContent() {
                 <CardContent>
                     <form onSubmit={signUpForm.handleSubmit(onSignUpSubmit)} className="grid gap-4">
                         <div className="grid gap-2">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="email-signup">Email</Label>
                         <Input
                             id="email-signup"
                             type="email"
@@ -185,7 +184,7 @@ function LoginContent() {
                         )}
                         </div>
                         <div className="grid gap-2">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password-signup">Password</Label>
                         <Input id="password-signup" type="password" {...signUpForm.register('password')} />
                         {signUpForm.formState.errors.password && (
                             <p className="text-xs text-red-500">
@@ -213,13 +212,3 @@ function LoginContent() {
     </div>
   );
 }
-
-export default function LoginPage() {
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <LoginContent />
-        </Suspense>
-    )
-}
-
-    
