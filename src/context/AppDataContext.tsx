@@ -243,7 +243,12 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
 
     const addTransaction = async (transactionData: Omit<Transaction, 'id'>) => {
         const colRef = collection(firestore, 'transactions').withConverter(transactionConverter);
-        const docRef = await addDocumentNonBlocking(colRef, transactionData);
+        const dataToSave = {
+            ...transactionData,
+            propertyId: transactionData.propertyId || null,
+            tenantId: transactionData.tenantId || null,
+        };
+        const docRef = await addDocumentNonBlocking(colRef, dataToSave);
         return docRef?.id;
     };
 
