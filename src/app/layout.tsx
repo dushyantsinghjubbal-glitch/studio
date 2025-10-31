@@ -186,8 +186,27 @@ function GlobalDialogs() {
             </Dialog>
 
             {/* Manual Transaction Form Dialog */}
-            <Dialog open={isAddTransactionOpen} onOpenChange={setAddTransactionOpen}>
-                <DialogContent className="sm:max-w-md">
+            <Dialog open={isAddTransactionOpen} onOpenChange={(open) => {
+                // If the form was opened for confirming extracted data, don't close it on outside click
+                if (extractedData && !open) {
+                    return;
+                }
+                setAddTransactionOpen(open);
+            }}>
+                <DialogContent className="sm:max-w-md" 
+                    onInteractOutside={(e) => {
+                        // Prevent closing when confirming extracted data
+                        if (extractedData) {
+                            e.preventDefault();
+                        }
+                    }}
+                    onEscapeKeyDown={(e) => {
+                        // Prevent closing with Escape key when confirming
+                        if (extractedData) {
+                            e.preventDefault();
+                        }
+                    }}
+                >
                     <DialogHeader>
                         <DialogTitle>{editingTransaction ? 'Edit Transaction' : (extractedData ? 'Confirm Transaction' : 'Add Transaction')}</DialogTitle>
                         <DialogDescription>
@@ -346,6 +365,7 @@ function FloatingActionButton() {
   const router = useRouter();
   const pathname = usePathname();
   const { setAddTransactionOpen, setScanReceiptOpen } = useContext(AppDataContext);
+  const [isFabOpen, setIsFabOpen] = useState(false);
 
   const getFabContent = () => {
     switch (pathname) {
@@ -365,7 +385,7 @@ function FloatingActionButton() {
         );
       default:
         return (
-          <Popover>
+          <Popover open={isFabOpen} onOpenChange={setIsFabOpen}>
             <PopoverTrigger asChild>
               <Button className="h-16 w-16 rounded-full shadow-lg" size="icon">
                 <Plus className="h-8 w-8" />
@@ -373,11 +393,11 @@ function FloatingActionButton() {
             </PopoverTrigger>
             <PopoverContent className="w-56 p-2 mb-2" align="end">
               <div className="grid gap-1">
-                <Button variant="ghost" className="justify-start" onClick={() => setAddTransactionOpen(true)}>
+                <Button variant="ghost" className="justify-start" onClick={() => { setAddTransactionOpen(true); setIsFabOpen(false); }}>
                   <Wallet className="mr-2 h-4 w-4" />
                   Add Transaction
                 </Button>
-                <Button variant="ghost" className="justify-start" onClick={() => setScanReceiptOpen(true)}>
+                <Button variant="ghost" className="justify-start" onClick={() => { setScanReceiptOpen(true); setIsFabOpen(false); }}>
                   <Receipt className="mr-2 h-4 w-4" />
                   Scan Receipt
                 </Button>
@@ -486,3 +506,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    
