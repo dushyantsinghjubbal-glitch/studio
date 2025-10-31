@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PlusCircle, Trash2, Edit, Building, Store, Trees, Briefcase, Calendar as CalendarIcon, MoreVertical, Search, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,7 +44,7 @@ const propertySchema = z.object({
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
 
-export default function PropertiesPage() {
+const PropertiesContent = () => {
   const { properties, tenants, addProperty, updateProperty, removeProperty, loading } = useContext(AppDataContext);
   const [isPropertyFormOpen, setIsPropertyFormOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
@@ -403,4 +403,12 @@ export default function PropertiesPage() {
         </Dialog>
     </main>
   );
+}
+
+export default function PropertiesPage() {
+    return (
+        <Suspense fallback={<div className="flex h-full w-full items-center justify-center p-8"><p>Loading Properties...</p></div>}>
+            <PropertiesContent />
+        </Suspense>
+    )
 }

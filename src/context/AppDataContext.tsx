@@ -171,38 +171,43 @@ export const AppDataContext = createContext<AppDataContextProps>({
     setScanReceiptOpen: () => {},
 });
 
-const transactionPages = ['/', '/ledger', '/properties/[propertyId]'];
+const pagesNeedingTransactions = ['/', '/ledger', '/properties/[propertyId]'];
+const pagesNeedingTenants = ['/', '/tenants', '/properties', '/properties/[propertyId]', '/ledger'];
+const pagesNeedingProperties = ['/', '/tenants', '/properties', '/properties/[propertyId]', '/ledger'];
+
 
 export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const firestore = useFirestore();
     const { user, isUserLoading } = useUser();
     const pathname = usePathname();
     
-    const [shouldFetchTransactions, setShouldFetchTransactions] = useState(false);
     const [isAddTransactionOpen, setAddTransactionOpen] = useState(false);
     const [isScanReceiptOpen, setScanReceiptOpen] = useState(false);
 
-
-    useEffect(() => {
-        const isOnTxPage = transactionPages.some(p => {
-            if (p.includes('[propertyId]')) {
-                return pathname.startsWith('/properties/');
+    const isPage = (patterns: string[]) => {
+        return patterns.some(p => {
+            if (p.includes('[') && p.includes(']')) {
+                const base = p.substring(0, p.indexOf('['));
+                return pathname.startsWith(base);
             }
             return p === pathname;
         });
-        setShouldFetchTransactions(isOnTxPage);
-    }, [pathname, user]);
+    }
+
+    const shouldFetchTransactions = isPage(pagesNeedingTransactions);
+    const shouldFetchTenants = isPage(pagesNeedingTenants);
+    const shouldFetchProperties = isPage(pagesNeedingProperties);
 
     // Only set up queries if a user is authenticated
     const tenantsQuery = useMemoFirebase(() => {
-        if (!user) return null;
+        if (!user || !shouldFetchTenants) return null;
         return collection(firestore, 'tenants').withConverter(tenantConverter);
-    }, [firestore, user]);
+    }, [firestore, user, shouldFetchTenants]);
     
     const propertiesQuery = useMemoFirebase(() => {
-        if (!user) return null;
+        if (!user || !shouldFetchProperties) return null;
         return collection(firestore, 'properties').withConverter(propertyConverter);
-    }, [firestore, user]);
+    }, [firestore, user, shouldFetchProperties]);
 
     const transactionsQuery = useMemoFirebase(() => {
         if (!user || !shouldFetchTransactions) return null;
@@ -282,6 +287,14 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         deleteDocumentNonBlocking(docRef);
     };
 
+    const getLoadingState = () => {
+        if (isUserLoading) return true;
+        if (shouldFetchTenants && tenantsLoading) return true;
+        if (shouldFetchProperties && propertiesLoading) return true;
+        if (shouldFetchTransactions && transactionsLoading) return true;
+        return false;
+    }
+
 
     const value = {
         tenants: tenants ?? [],
@@ -296,7 +309,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         addTransaction,
         updateTransaction,
         removeTransaction,
-        loading: isUserLoading || tenantsLoading || propertiesLoading || transactionsLoading,
+        loading: getLoadingState(),
         error: tenantsError || propertiesError || transactionsError,
         isAddTransactionOpen,
         setAddTransactionOpen,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PlusCircle, Trash2, Edit, MoreVertical, Calendar as CalendarIcon, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,7 @@ const tenantSchema = z.object({
 
 type TenantFormValues = z.infer<typeof tenantSchema>;
 
-export default function TenantsPage() {
+const TenantsContent = () => {
   const { tenants, properties, addTenant, updateTenant, removeTenant, loading } = useContext(AppDataContext);
   const [isTenantFormOpen, setIsTenantFormOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
@@ -397,4 +397,12 @@ export default function TenantsPage() {
         </Dialog>
     </main>
   );
+}
+
+export default function TenantsPage() {
+    return (
+        <Suspense fallback={<div className="flex h-full w-full items-center justify-center p-8"><p>Loading Tenants...</p></div>}>
+            <TenantsContent />
+        </Suspense>
+    )
 }
