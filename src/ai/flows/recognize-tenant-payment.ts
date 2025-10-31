@@ -45,7 +45,9 @@ Based on the context and the content of the receipt image, extract the following
 1.  **title**: Create a brief, clear title for the transaction.
 2.  **amount**: Find the total numerical amount paid.
 3.  **date**: Find the date of the transaction and format it as YYYY-MM-DD.
-4.  **category**: Categorize the transaction into one of the following: 'Rent Received', 'Utilities', 'Maintenance', 'Salary', 'Groceries', 'Other'.
+4.  **category**: Analyze the receipt to determine if it is for money received (income) or money spent (expense).
+    - If it is income (like a rent payment receipt), classify it as 'Rent Received'.
+    - Otherwise, categorize the transaction into one of the following: 'Utilities', 'Maintenance', 'Salary', 'Groceries', 'Other'.
 5.  **merchant**: If a clear merchant name or brand (like 'Nike', 'Starbucks', 'Walmart') is visible, extract it. Otherwise, omit this field.
 
 Analyze the attached image.
