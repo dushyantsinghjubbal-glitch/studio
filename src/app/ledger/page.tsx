@@ -45,7 +45,6 @@ type TransactionFormValues = z.infer<typeof transactionSchema>;
 const LedgerContent = () => {
   const { transactions, properties, tenants, addTransaction, loading, isAddTransactionOpen, setAddTransactionOpen, isScanReceiptOpen, setScanReceiptOpen } = useContext(AppDataContext);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractedData, setExtractedData] = useState<Partial<TransactionFormValues> | null>(null);
   const { toast } = useToast();
@@ -228,11 +227,9 @@ const LedgerContent = () => {
                             const file = e.target.files?.[0];
                             if (file) {
                                 setSelectedFile(file);
-                                setPreviewUrl(URL.createObjectURL(file));
                             }
                         }} />
                     </div>
-                    {previewUrl && <Image src={previewUrl} alt="Receipt preview" width={400} height={400} className="rounded-md object-contain" />}
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setScanReceiptOpen(false)}>Cancel</Button>
