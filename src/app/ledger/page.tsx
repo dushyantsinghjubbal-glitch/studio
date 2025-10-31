@@ -25,6 +25,7 @@ import { recognizeTransaction, RecognizeTransactionInput } from '@/ai/flows/reco
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const transactionSchema = z.object({
@@ -37,6 +38,7 @@ const transactionSchema = z.object({
     receipt: z.instanceof(File).optional(),
     propertyId: z.string().optional(),
     tenantId: z.string().optional(),
+    merchant: z.string().optional(),
 });
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
@@ -102,6 +104,7 @@ const LedgerContent = () => {
               date: new Date(result.date),
               category: result.category,
               type: result.category === 'Rent Received' || result.category === 'Salary' ? 'income' : 'expense',
+              merchant: result.merchant,
           });
           toast({ title: 'Success!', description: 'Please confirm the extracted details.' });
           
@@ -146,6 +149,12 @@ const LedgerContent = () => {
     'Groceries': 'bg-orange-100 text-orange-800',
     'Other': 'bg-gray-100 text-gray-800',
   };
+  
+  const getBrandLogo = (merchant?: string) => {
+      if (!merchant) return null;
+      const domain = merchant.toLowerCase().replace(/\s+/g, '') + '.com';
+      return `https://logo.clearbit.com/${domain}`;
+  }
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 animate-in fade-in-50">
@@ -194,9 +203,12 @@ const LedgerContent = () => {
                         {transactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(tx => (
                             <div key={tx.id} className="flex items-center justify-between py-3">
                                 <div className="flex items-center gap-4">
-                                     <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg p-2', categoryColors[tx.category])}>
-                                        {categoryIcons[tx.category]}
-                                    </div>
+                                     <Avatar className="h-10 w-10 rounded-lg">
+                                        <AvatarImage src={getBrandLogo(tx.merchant)} alt={tx.merchant || tx.category} />
+                                        <AvatarFallback className={cn('flex items-center justify-center rounded-lg p-2', categoryColors[tx.category])}>
+                                            {categoryIcons[tx.category]}
+                                        </AvatarFallback>
+                                    </Avatar>
                                     <div>
                                         <p className="font-medium">{tx.title}</p>
                                         <p className="text-sm text-muted-foreground">{format(new Date(tx.date), 'PPP')}</p>

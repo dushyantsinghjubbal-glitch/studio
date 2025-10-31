@@ -59,6 +59,7 @@ export type Transaction = {
     notes?: string;
     tenantId?: string;
     propertyId?: string;
+    merchant?: string;
 };
 
 

@@ -25,6 +25,7 @@ const RecognizeTransactionOutputSchema = z.object({
   amount: z.number().describe("The total amount of the transaction found on the receipt."),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format.").describe('The date of the transaction in YYYY-MM-DD format.'),
   category: z.enum(['Rent Received', 'Utilities', 'Maintenance', 'Salary', 'Groceries', 'Other']).describe('The category of the transaction.'),
+  merchant: z.string().optional().describe("The merchant or brand name if visible on the receipt (e.g., 'Starbucks', 'Nike')."),
 });
 export type RecognizeTransactionOutput = z.infer<typeof RecognizeTransactionOutputSchema>;
 
@@ -45,6 +46,7 @@ Based on the context and the content of the receipt image, extract the following
 2.  **amount**: Find the total numerical amount paid.
 3.  **date**: Find the date of the transaction and format it as YYYY-MM-DD.
 4.  **category**: Categorize the transaction into one of the following: 'Rent Received', 'Utilities', 'Maintenance', 'Salary', 'Groceries', 'Other'.
+5.  **merchant**: If a clear merchant name or brand (like 'Nike', 'Starbucks', 'Walmart') is visible, extract it. Otherwise, omit this field.
 
 Analyze the attached image.
 

@@ -241,6 +241,10 @@ fromat": "date",
         "propertyId": {
             "type": "string",
             "description": "Optional link to the property related to the transaction."
+        },
+        "merchant": {
+            "type": "string",
+            "description": "The merchant or brand associated with the transaction (e.g., 'Nike', 'Starbucks')."
         }
       },
       "required": ["id", "title", "amount", "type", "category", "date"]

@@ -39,6 +39,12 @@ const nextConfig: NextConfig = {
         hostname: 'api.dicebear.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'logo.clearbit.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
