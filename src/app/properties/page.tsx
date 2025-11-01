@@ -2,10 +2,10 @@
 
 import { useState, useContext, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { PlusCircle, Trash2, Edit, Building, Store, Trees, Briefcase, Calendar as CalendarIcon, MoreVertical, Search, BarChart2 } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Building, Store, Trees, Briefcase, MoreVertical, Search, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ import { AppDataContext, Property } from '@/context/AppDataContext';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 
 const propertySchema = z.object({
@@ -110,7 +111,7 @@ const PropertiesContent = () => {
   };
 
   const getPropertyIcon = (type: Property['type']) => {
-    const props = { className: "h-6 w-6 text-muted-foreground" };
+    const props = { className: "h-8 w-8 text-gray-500" };
     switch (type) {
         case 'shop': return <Store {...props} />;
         case 'flat': return <Building {...props} />;
@@ -132,103 +133,100 @@ const PropertiesContent = () => {
   );
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 animate-in fade-in-50">
-        <Card>
-            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div>
-                    <CardTitle>Properties</CardTitle>
-                    <CardDescription>Manage your rental properties and their details.</CardDescription>
+    <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="flex flex-1 flex-col gap-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Properties</h1>
+                <p className="text-gray-600 dark:text-gray-400">Manage your rental properties and their details.</p>
+            </div>
+             <div className="flex items-center gap-2 w-full md:w-auto">
+                <div className="relative flex-1 md:flex-initial">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input type="search" placeholder="Search properties..." className="pl-8" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                 </div>
-                 <div className="flex items-center gap-2 w-full md:w-auto">
-                    <div className="relative flex-1 md:flex-initial">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input type="search" placeholder="Search properties..." className="pl-8" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent>
-                 {loading ? (<p>Loading properties...</p>) : filteredProperties.length === 0 ? (
-                    <div className="text-center py-12">
-                        <Building className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <h3 className="mt-4 text-lg font-semibold">No properties found</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">{searchTerm ? 'Try adjusting your search.' : 'Get started by adding your first property.'}</p>
-                        <Button className="mt-6" onClick={() => openPropertyForm(null)}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add Property
-                        </Button>
-                    </div>
-                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredProperties.map((property) => (
-                            <Card key={property.id} className="flex flex-col">
-                                <CardHeader className="flex-row gap-4 items-center">
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-                                        {getPropertyIcon(property.type)}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="font-semibold text-lg">{property.name}</p>
-                                        <p className="text-sm text-muted-foreground truncate">{property.address}</p>
-                                    </div>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => router.push(`/properties/${property.id}`)}>
-                                                <BarChart2 className="mr-2 h-4 w-4" />
-                                                <span>View Details</span>
+            </div>
+        </div>
+        
+        {loading ? (<p>Loading properties...</p>) : filteredProperties.length === 0 ? (
+            <div className="text-center py-12 bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-3xl shadow-lg">
+                <Building className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">No properties found</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{searchTerm ? 'Try adjusting your search.' : 'Get started by adding your first property.'}</p>
+                <Button className="mt-6" onClick={() => openPropertyForm(null)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Property
+                </Button>
+            </div>
+         ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredProperties.map((property) => (
+                    <motion.div whileHover={{ scale: 1.03 }} key={property.id} className="rounded-3xl bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg border border-white/20 flex flex-col">
+                        <CardHeader className="flex-row gap-4 items-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800">
+                                {getPropertyIcon(property.type)}
+                            </div>
+                            <div className="flex-1">
+                                <p className="font-semibold text-lg">{property.name}</p>
+                                <p className="text-sm text-muted-foreground truncate">{property.address}</p>
+                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => router.push(`/properties/${property.id}`)}>
+                                        <BarChart2 className="mr-2 h-4 w-4" />
+                                        <span>View Details</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => openPropertyForm(property)}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        <span>Edit</span>
+                                    </DropdownMenuItem>
+                                     <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                <span>Remove</span>
                                             </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={() => openPropertyForm(property)}>
-                                                <Edit className="mr-2 h-4 w-4" />
-                                                <span>Edit</span>
-                                            </DropdownMenuItem>
-                                             <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        <span>Remove</span>
-                                                    </DropdownMenuItem>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This will permanently remove the property.
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleRemoveProperty(property.id)} className="bg-red-600 hover:bg-red-700">
-                                                            Yes, remove
-                                                        </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </CardHeader>
-                                <CardContent className="flex-grow space-y-2">
-                                     <div className="text-sm font-semibold text-primary">
-                                        ₹{property.rentAmount}/month
-                                    </div>
-                                    <div className="text-sm text-muted-foreground capitalize">
-                                        Category: {property.category}
-                                    </div>
-                                </CardContent>
-                                <CardFooter>
-                                     <Badge variant="outline" className={cn("capitalize", occupancyStatusColors[property.occupancyStatus])}>
-                                        {property.occupancyStatus}
-                                    </Badge>
-                                </CardFooter>
-                            </Card>
-                        ))}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This will permanently remove the property.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleRemoveProperty(property.id)} className="bg-red-600 hover:bg-red-700">
+                                                    Yes, remove
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </CardHeader>
+                        <CardContent className="flex-grow space-y-2">
+                             <div className="text-lg font-semibold text-blue-500">
+                                ₹{property.rentAmount.toLocaleString()}<span className="text-sm font-normal text-muted-foreground">/month</span>
+                            </div>
+                            <div className="text-sm text-muted-foreground capitalize">
+                                Category: {property.category}
+                            </div>
+                        </CardContent>
+                        <CardFooter>
+                             <Badge variant="outline" className={cn("capitalize", occupancyStatusColors[property.occupancyStatus])}>
+                                {property.occupancyStatus}
+                            </Badge>
+                        </CardFooter>
+                    </motion.div>
+                ))}
+            </div>
+        )}
         
         <Dialog open={isPropertyFormOpen} onOpenChange={(isOpen) => {
             if (!isOpen) {
@@ -357,7 +355,7 @@ const PropertiesContent = () => {
                 </form>
             </DialogContent>
         </Dialog>
-    </main>
+    </motion.main>
   );
 }
 

@@ -2,7 +2,7 @@
 
 import { useState, useContext, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { PlusCircle, Trash2, Edit, MoreVertical, Calendar as CalendarIcon, UserPlus } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, MoreVertical, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -14,14 +14,12 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AppDataContext, Tenant } from '@/context/AppDataContext';
 import { Badge } from '@/components/ui/badge';
+import { motion } from 'framer-motion';
 
 
 const tenantSchema = z.object({
@@ -122,99 +120,96 @@ const TenantsContent = () => {
   };
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 animate-in fade-in-50">
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                    <CardTitle>Tenants</CardTitle>
-                    <CardDescription>Manage your tenants and their information.</CardDescription>
-                </div>
-            </CardHeader>
-            <CardContent>
-                {loading ? (<p>Loading tenants...</p>) : tenants.length === 0 ? (
-                    <div className="text-center py-12">
-                        <UserPlus className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <h3 className="mt-4 text-lg font-semibold">No tenants found</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">Get started by adding your first tenant.</p>
-                        <Button className="mt-6" onClick={() => openTenantForm(null)}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add Tenant
-                        </Button>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {tenants.map((tenant) => (
-                            <Card key={tenant.id} className="flex flex-col">
-                                <CardHeader className="flex-row gap-4 items-start">
-                                    <Avatar className="h-12 w-12 border">
-                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${tenant.id}`} />
-                                        <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1">
-                                        <p className="font-semibold text-lg">{tenant.name}</p>
-                                        <p className="text-sm text-muted-foreground">{tenant.propertyName}</p>
-                                    </div>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => openTenantForm(tenant)}>
-                                                <Edit className="mr-2 h-4 w-4" />
-                                                <span>Edit</span>
+    <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="flex flex-1 flex-col gap-6">
+        <div className="flex flex-row items-center justify-between">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Tenants</h1>
+                <p className="text-gray-600 dark:text-gray-400">Manage your tenants and their information.</p>
+            </div>
+        </div>
+
+        {loading ? (<p>Loading tenants...</p>) : tenants.length === 0 ? (
+            <div className="text-center py-12 bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-3xl shadow-lg">
+                <UserPlus className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-semibold">No tenants found</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Get started by adding your first tenant.</p>
+                <Button className="mt-6" onClick={() => openTenantForm(null)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Tenant
+                </Button>
+            </div>
+        ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {tenants.map((tenant) => (
+                    <motion.div whileHover={{ scale: 1.03 }} key={tenant.id} className="rounded-3xl bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg border border-white/20 flex flex-col">
+                        <CardHeader className="flex-row gap-4 items-start">
+                            <Avatar className="h-12 w-12 border-2 border-white">
+                                <AvatarImage src={`https://i.pravatar.cc/150?u=${tenant.id}`} />
+                                <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                                <p className="font-semibold text-lg">{tenant.name}</p>
+                                <p className="text-sm text-muted-foreground">{tenant.propertyName}</p>
+                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => openTenantForm(tenant)}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        <span>Edit</span>
+                                    </DropdownMenuItem>
+                                     <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                <span>Remove</span>
                                             </DropdownMenuItem>
-                                             <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600">
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        <span>Remove</span>
-                                                    </DropdownMenuItem>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This action cannot be undone. This will permanently remove {tenant.name}.
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleRemoveTenant(tenant.id)} className="bg-red-600 hover:bg-red-700">
-                                                        Remove Tenant
-                                                    </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </CardHeader>
-                                <CardContent className="flex-grow space-y-2">
-                                     <div className="text-sm text-muted-foreground">
-                                        Rent: <span className="font-semibold text-foreground">₹{tenant.rentAmount.toLocaleString()}</span>
-                                    </div>
-                                </CardContent>
-                                <CardFooter>
-                                    <Badge 
-                                        className={cn(
-                                            'capitalize transition-all',
-                                            tenant.paymentStatus === 'paid' && 'bg-green-100 text-green-800 border-green-200',
-                                            tenant.paymentStatus === 'due' && 'bg-yellow-100 text-yellow-800 border-yellow-200 animate-pulse',
-                                            tenant.paymentStatus === 'overdue' && 'bg-red-100 text-red-800 border-red-200 animate-bounce',
-                                            tenant.paymentStatus === 'partial' && 'bg-orange-100 text-orange-800 border-orange-200'
-                                        )}
-                                        variant="outline"
-                                    >
-                                        {tenant.paymentStatus}
-                                    </Badge>
-                                </CardFooter>
-                            </Card>
-                        ))}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently remove {tenant.name}.
+                                            </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleRemoveTenant(tenant.id)} className="bg-red-600 hover:bg-red-700">
+                                                Remove Tenant
+                                            </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </CardHeader>
+                        <CardContent className="flex-grow space-y-2">
+                             <div className="text-sm text-muted-foreground">
+                                Rent: <span className="font-semibold text-foreground text-base">₹{tenant.rentAmount.toLocaleString()}</span>
+                            </div>
+                        </CardContent>
+                        <CardFooter>
+                            <Badge 
+                                className={cn(
+                                    'capitalize transition-all',
+                                    tenant.paymentStatus === 'paid' && 'bg-green-100 text-green-800 border-green-200',
+                                    tenant.paymentStatus === 'due' && 'bg-yellow-100 text-yellow-800 border-yellow-200 animate-pulse',
+                                    tenant.paymentStatus === 'overdue' && 'bg-red-100 text-red-800 border-red-200 animate-bounce',
+                                    tenant.paymentStatus === 'partial' && 'bg-orange-100 text-orange-800 border-orange-200'
+                                )}
+                                variant="outline"
+                            >
+                                {tenant.paymentStatus}
+                            </Badge>
+                        </CardFooter>
+                    </motion.div>
+                ))}
+            </div>
+        )}
 
         {/* Tenant Add/Edit Dialog */}
         <Dialog open={isTenantFormOpen} onOpenChange={(isOpen) => {
@@ -343,7 +338,7 @@ const TenantsContent = () => {
                 </form>
             </DialogContent>
         </Dialog>
-    </main>
+    </motion.main>
   );
 }
 

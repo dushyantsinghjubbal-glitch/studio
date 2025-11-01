@@ -12,6 +12,7 @@ import { AppDataContext, Tenant, Transaction } from '@/context/AppDataContext';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { motion } from "framer-motion";
 
 const LedgerContent = () => {
   const { transactions, tenants, removeTransaction, loading, setAddTransactionOpen, setEditingTransaction } = useContext(AppDataContext);
@@ -64,49 +65,42 @@ const LedgerContent = () => {
     partial: 'bg-orange-100 text-orange-800 border-orange-200',
   };
 
+  const statCards = [
+    { title: "Total Income", amount: totalIncome, icon: <ArrowUp className="text-green-500" />, color: "from-green-50 to-emerald-50 dark:from-green-900/40 dark:to-emerald-900/40" },
+    { title: "Total Expense", amount: totalExpense, icon: <ArrowDown className="text-red-500" />, color: "from-red-50 to-rose-50 dark:from-red-900/40 dark:to-rose-900/40" },
+    { title: "Net Savings", amount: netSavings, icon: <Wallet className="text-blue-500" />, color: "from-blue-50 to-cyan-50 dark:from-blue-900/40 dark:to-cyan-900/40" },
+  ];
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 animate-in fade-in-50">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="flex flex-1 flex-col gap-6">
         <div className="flex items-center justify-between space-y-2">
-            <h2 className="text-3xl font-bold tracking-tight">Financial Ledger</h2>
+            <h1 className="text-3xl font-bold tracking-tight">Financial Ledger</h1>
         </div>
 
-         <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Income</CardTitle>
-                    <ArrowUp className="h-4 w-4 text-accent" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-accent">₹{totalIncome.toLocaleString()}</div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Expense</CardTitle>
-                    <ArrowDown className="h-4 w-4 text-destructive" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-destructive">₹{totalExpense.toLocaleString()}</div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Net Savings</CardTitle>
-                    <Wallet className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent>
-                    <div className={`text-2xl font-bold ${netSavings >= 0 ? 'text-primary' : 'text-destructive'}`}>₹{netSavings.toLocaleString()}</div>
-                </CardContent>
-            </Card>
+         <div className="grid gap-6 md:grid-cols-3">
+            {statCards.map(card => (
+              <motion.div
+                key={card.title}
+                whileHover={{ scale: 1.03 }}
+                className={`rounded-3xl bg-gradient-to-br ${card.color} p-6 shadow-md hover:shadow-xl border border-white/20`}
+              >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-0">
+                      <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                      {card.icon}
+                  </CardHeader>
+                  <CardContent className="p-0">
+                      <div className={`text-2xl font-bold ${card.amount >= 0 ? 'text-gray-800 dark:text-gray-100' : 'text-red-500 dark:text-red-400'}`}>₹{card.amount.toLocaleString()}</div>
+                  </CardContent>
+              </motion.div>
+            ))}
         </div>
 
-        <Card>
-            <CardHeader>
+        <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-3xl shadow-lg p-6">
+            <CardHeader className="p-0 pb-4">
                 <CardTitle>Generated Rental Receipts</CardTitle>
                 <CardDescription>Status of pending rent payments for which receipts have been generated.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
                 {loading ? <p>Loading receipts...</p> : pendingReceipts.length === 0 ? (
                      <div className="text-center py-8">
                         <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -114,7 +108,7 @@ const LedgerContent = () => {
                         <p className="mt-1 text-sm text-muted-foreground">Generate a receipt from the dashboard to start a payment cycle.</p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-border">
+                    <div className="divide-y divide-gray-200 dark:divide-gray-800">
                         {pendingReceipts.map(tenant => {
                             const dueDate = tenant.lastReceiptGenerationDate ? add(new Date(tenant.lastReceiptGenerationDate), { days: tenant.netTerms || 0 }) : null;
                             return (
@@ -148,16 +142,16 @@ const LedgerContent = () => {
                     </div>
                 )}
             </CardContent>
-        </Card>
+        </div>
 
-        <Card>
-            <CardHeader>
+        <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-3xl shadow-lg p-6">
+            <CardHeader className="p-0 pb-4">
                 <CardTitle>Transactions</CardTitle>
                 <CardDescription>A list of all your income and expenses.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
                 {loading ? <p>Loading transactions...</p> : (
-                    <div className="divide-y divide-border">
+                    <div className="divide-y divide-gray-200 dark:divide-gray-800">
                         {transactions.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(tx => (
                             <div key={tx.id} className="flex items-center justify-between py-3">
                                 <div className="flex items-center gap-4">
@@ -174,7 +168,7 @@ const LedgerContent = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="text-right">
-                                        <p className={`font-semibold ${tx.type === 'income' ? 'text-accent' : 'text-destructive'}`}>
+                                        <p className={`font-semibold ${tx.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
                                             {tx.type === 'income' ? '+' : '-'}₹{tx.amount.toLocaleString()}
                                         </p>
                                         <Badge variant="outline">{tx.category}</Badge>
@@ -220,8 +214,8 @@ const LedgerContent = () => {
                     </div>
                 )}
             </CardContent>
-        </Card>
-    </main>
+        </div>
+    </motion.div>
   );
 }
 
@@ -233,5 +227,3 @@ export default function LedgerPage() {
         </Suspense>
     )
 }
-
-    

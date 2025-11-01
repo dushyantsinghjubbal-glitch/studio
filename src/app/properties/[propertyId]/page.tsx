@@ -7,9 +7,11 @@ import { format } from 'date-fns';
 import { AppDataContext, Property, Tenant, Transaction } from '@/context/AppDataContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Building, User, Wallet } from 'lucide-react';
+import { ArrowLeft, Building, User, Wallet, ArrowUp, ArrowDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
+
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -20,7 +22,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <span className="text-[0.70rem] uppercase text-muted-foreground">
               Income
             </span>
-            <span className="font-bold text-accent">
+            <span className="font-bold text-green-500">
               ₹{payload[0].value.toLocaleString()}
             </span>
           </div>
@@ -28,7 +30,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <span className="text-[0.70rem] uppercase text-muted-foreground">
               Expense
             </span>
-            <span className="font-bold text-destructive">
+            <span className="font-bold text-red-500">
               ₹{payload[1].value.toLocaleString()}
             </span>
           </div>
@@ -80,9 +82,15 @@ export default function PropertyDetailsPage() {
     occupied: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     reserved: 'bg-blue-100 text-blue-800 border-blue-200',
   };
+  
+  const statCards = [
+    { title: "Total Income", amount: totalIncome, icon: <ArrowUp className="text-green-500" />, color: "from-green-50 to-emerald-50 dark:from-green-900/40 dark:to-emerald-900/40" },
+    { title: "Total Expense", amount: totalExpense, icon: <ArrowDown className="text-red-500" />, color: "from-red-50 to-rose-50 dark:from-red-900/40 dark:to-rose-900/40" },
+    { title: "Net Profit", amount: netProfit, icon: <Wallet className="text-blue-500" />, color: "from-blue-50 to-cyan-50 dark:from-blue-900/40 dark:to-cyan-900/40" },
+  ];
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 animate-in fade-in-50">
+    <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="flex flex-1 flex-col gap-6">
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
@@ -96,47 +104,33 @@ export default function PropertyDetailsPage() {
         </Badge>
       </div>
 
-       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Income</CardTitle>
-                    <Wallet className="h-4 w-4 text-accent" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-accent">₹{totalIncome.toLocaleString()}</div>
-                    <p className="text-xs text-muted-foreground">Total income from this property</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-                    <Wallet className="h-4 w-4 text-destructive" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-destructive">₹{totalExpense.toLocaleString()}</div>
-                     <p className="text-xs text-muted-foreground">Total expenses for this property</p>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-                    <Wallet className="h-4 w-4 text-primary" />
-                </CardHeader>
-                <CardContent>
-                    <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>₹{netProfit.toLocaleString()}</div>
-                    <p className="text-xs text-muted-foreground">Net profit after all expenses</p>
-                </CardContent>
-            </Card>
+       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+           {statCards.map(card => (
+              <motion.div
+                key={card.title}
+                whileHover={{ scale: 1.03 }}
+                className={`rounded-3xl bg-gradient-to-br ${card.color} p-6 shadow-md hover:shadow-xl border border-white/20`}
+              >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-0">
+                      <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                      {card.icon}
+                  </CardHeader>
+                  <CardContent className="p-0">
+                      <div className={`text-2xl font-bold ${card.amount >= 0 ? 'text-gray-800 dark:text-gray-100' : 'text-red-500 dark:text-red-400'}`}>₹{card.amount.toLocaleString()}</div>
+                       <p className="text-xs text-muted-foreground">Total for this property</p>
+                  </CardContent>
+              </motion.div>
+            ))}
         </div>
 
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
-          <CardHeader>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+        <div className="lg:col-span-4 bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-3xl shadow-lg p-6">
+          <CardHeader className="p-0 pb-4">
             <CardTitle>Monthly Earnings</CardTitle>
             <CardDescription>Income vs. Expenses for {property.name}.</CardDescription>
           </CardHeader>
-          <CardContent className="pl-2">
+          <CardContent className="pl-0 pr-4">
             <ResponsiveContainer width="100%" height={350}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -144,17 +138,17 @@ export default function PropertyDetailsPage() {
                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${Number(value) / 1000}k`} />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", radius: 'var(--radius)' }} />
                 <Legend iconSize={10} />
-                <Bar dataKey="income" fill="hsl(var(--accent))" name="Income" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" fill="hsl(var(--destructive))" name="Expense" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="income" fill="var(--color-green-500)" name="Income" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="expense" fill="var(--color-red-500)" name="Expense" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
-        </Card>
-        <Card className="lg:col-span-3">
-            <CardHeader>
+        </div>
+        <div className="lg:col-span-3 bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-3xl shadow-lg p-6">
+            <CardHeader className="p-0 pb-4">
                 <CardTitle>Property Info</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4">
+            <CardContent className="p-0 grid gap-4">
                 <div className="flex items-center gap-4">
                     <Building className="h-6 w-6 text-muted-foreground"/>
                     <div className="grid gap-1">
@@ -186,8 +180,8 @@ export default function PropertyDetailsPage() {
                     </div>
                 )}
             </CardContent>
-        </Card>
+        </div>
       </div>
-    </main>
+    </motion.main>
   );
 }

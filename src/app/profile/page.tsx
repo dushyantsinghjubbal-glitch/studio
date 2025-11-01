@@ -12,6 +12,7 @@ import { AppDataContext, UserProfile } from '@/context/AppDataContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import { motion } from 'framer-motion';
 
 const profileSchema = z.object({
   businessName: z.string().optional(),
@@ -81,21 +82,22 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 animate-in fade-in-50">
+    <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="flex flex-1 flex-col gap-6">
       <div className="mx-auto grid w-full max-w-4xl gap-2">
         <h1 className="text-3xl font-semibold">Profile Settings</h1>
+        <p className="text-gray-600 dark:text-gray-400">Manage your business and payment information for receipts.</p>
       </div>
 
       <div className="mx-auto w-full max-w-4xl">
         <form onSubmit={form.handleSubmit(onSubmit)}>
-            <Card>
-            <CardHeader>
+            <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-3xl shadow-lg p-6">
+            <CardHeader className="p-0 pb-6">
                 <CardTitle>Business & Owner Information</CardTitle>
                 <CardDescription>
                 This information will be displayed on your rental receipts.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-0 space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="businessName">Business Name</Label>
@@ -164,7 +166,10 @@ export default function ProfilePage() {
                     <Label htmlFor="bankDetails">Bank Details</Label>
                     <Textarea
                     id="bankDetails"
-                    placeholder="Account Name: ...&#10;Account Number: ...&#10;IFSC Code: ...&#10;Bank Name: ..."
+                    placeholder="Account Name: ...
+Account Number: ...
+IFSC Code: ...
+Bank Name: ..."
                     {...form.register('bankDetails')}
                     />
                 </div>
@@ -179,9 +184,9 @@ export default function ProfilePage() {
                 )}
               </Button>
             </CardContent>
-            </Card>
+            </div>
         </form>
       </div>
-    </main>
+    </motion.main>
   );
 }
