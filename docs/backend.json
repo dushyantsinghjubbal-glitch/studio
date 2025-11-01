@@ -44,18 +44,9 @@
           "type": "number",
           "description": "Standard rent set for this property."
         },
-        "depositAmount": {
-          "type": "number",
-          "description": "Security deposit."
-        },
         "maintenanceCharge": {
           "type": "number",
           "description": "Optional, per month."
-        },
-        "rentDueDate": {
-          "type": "string",
-          "format": "date",
-          "description": "Rent due day each month."
         },
         "currentTenantId": {
           "type": "string",
@@ -65,11 +56,6 @@
           "type": "string",
           "description": "Occupancy status.",
           "enum": ["vacant", "occupied", "reserved"]
-        },
-        "availabilityDate": {
-          "type": "string",
-fromat": "date",
-          "description": "When next available."
         },
         "notes": {
           "type": "string",

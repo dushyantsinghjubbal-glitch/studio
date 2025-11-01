@@ -16,12 +16,9 @@ export type Property = {
     landmark?: string;
     pinCode?: string;
     rentAmount: number;
-    depositAmount?: number;
     maintenanceCharge?: number;
-    rentDueDate?: Date | null;
     currentTenantId?: string;
     occupancyStatus: 'vacant' | 'occupied' | 'reserved';
-    availabilityDate?: Date | null;
     notes?: string;
     createdAt: string;
     updatedAt: string;
@@ -69,8 +66,6 @@ const propertyConverter = {
             createdAt: 'createdAt' in property ? property.createdAt : new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
-        data.rentDueDate = data.rentDueDate || null;
-        data.availabilityDate = data.availabilityDate || null;
         return data;
     },
     fromFirestore: (snapshot: any, options: any): Property => {
@@ -78,8 +73,6 @@ const propertyConverter = {
         return {
             id: snapshot.id,
             ...data,
-            rentDueDate: data.rentDueDate?.toDate ? data.rentDueDate.toDate() : (data.rentDueDate ? new Date(data.rentDueDate) : null),
-            availabilityDate: data.availabilityDate?.toDate ? data.availabilityDate.toDate() : (data.availabilityDate ? new Date(data.availabilityDate) : null),
             createdAt: data.createdAt,
             updatedAt: data.updatedAt,
         } as Property;

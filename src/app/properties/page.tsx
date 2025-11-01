@@ -15,13 +15,10 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { AppDataContext, Property } from '@/context/AppDataContext';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 
 const propertySchema = z.object({
@@ -34,10 +31,7 @@ const propertySchema = z.object({
     areaSize: z.string().optional(),
     landmark: z.string().optional(),
     pinCode: z.string().optional(),
-    depositAmount: z.coerce.number().optional(),
     maintenanceCharge: z.coerce.number().optional(),
-    rentDueDate: z.date().optional().nullable(),
-    availabilityDate: z.date().optional().nullable(),
     notes: z.string().optional(),
     currentTenantId: z.string().optional(),
 });
@@ -60,7 +54,6 @@ const PropertiesContent = () => {
         category: 'residential',
         occupancyStatus: 'vacant',
         rentAmount: 0,
-        depositAmount: 0,
         maintenanceCharge: 0,
     }
   });
@@ -74,11 +67,7 @@ const PropertiesContent = () => {
   const openPropertyForm = (property: Property | null) => {
     setEditingProperty(property);
     if (property) {
-        propertyForm.reset({
-            ...property,
-            rentDueDate: property.rentDueDate ? new Date(property.rentDueDate) : undefined,
-            availabilityDate: property.availabilityDate ? new Date(property.availabilityDate) : undefined,
-        });
+        propertyForm.reset(property);
     } else {
         propertyForm.reset({
             name: '',
@@ -90,10 +79,7 @@ const PropertiesContent = () => {
             areaSize: '',
             landmark: '',
             pinCode: '',
-            depositAmount: 0,
             maintenanceCharge: 0,
-            rentDueDate: undefined,
-            availabilityDate: undefined,
             notes: '',
             currentTenantId: '',
         });
@@ -105,8 +91,6 @@ const PropertiesContent = () => {
       const propertyData = {
           ...data,
           currentTenantId: data.occupancyStatus === 'occupied' ? data.currentTenantId : '',
-          rentDueDate: data.rentDueDate || null,
-          availabilityDate: data.availabilityDate || null,
       };
       if (editingProperty) {
           await updateProperty({ ...editingProperty, ...propertyData });
@@ -310,15 +294,11 @@ const PropertiesContent = () => {
                         </div>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-4">
+                    <div className="grid md:grid-cols-2 gap-4">
                          <div className="grid gap-2">
                             <Label htmlFor="rentAmount">Rent Amount (₹)</Label>
                             <Input id="rentAmount" type="number" {...propertyForm.register('rentAmount')} />
                             {propertyForm.formState.errors.rentAmount && <p className="text-red-500 text-xs">{propertyForm.formState.errors.rentAmount.message}</p>}
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="depositAmount">Deposit Amount (₹)</Label>
-                            <Input id="depositAmount" type="number" {...propertyForm.register('depositAmount')} />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="maintenanceCharge">Maintenance (₹/mo)</Label>
@@ -356,36 +336,6 @@ const PropertiesContent = () => {
                                 )} />
                             </div>
                         )}
-                    </div>
-                     <div className="grid md:grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                           <Label>Rent Due Date</Label>
-                            <Controller name="rentDueDate" control={propertyForm.control} render={({ field }) => (
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} initialFocus /></PopoverContent>
-                                </Popover>
-                            )} />
-                        </div>
-                        <div className="grid gap-2">
-                           <Label>Next Availability Date</Label>
-                            <Controller name="availabilityDate" control={propertyForm.control} render={({ field }) => (
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} initialFocus /></PopoverContent>
-                                </Popover>
-                            )} />
-                        </div>
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="notes">Notes</Label>
