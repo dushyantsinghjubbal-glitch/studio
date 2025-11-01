@@ -1,20 +1,20 @@
 'use client';
 
 import { useState, useContext, useEffect, Suspense } from 'react';
-import { MoreVertical, Search, Edit, Trash2, ArrowDown, ArrowUp, Briefcase, Droplets, Wrench, HandCoins, ShoppingCart, CircleHelp, Wallet } from 'lucide-react';
+import { MoreVertical, Search, Edit, Trash2, ArrowDown, ArrowUp, Briefcase, Droplets, Wrench, HandCoins, ShoppingCart, CircleHelp, Wallet, FileText, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { format } from 'date-fns';
+import { format, add } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { AppDataContext, Transaction } from '@/context/AppDataContext';
+import { AppDataContext, Tenant, Transaction } from '@/context/AppDataContext';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const LedgerContent = () => {
-  const { transactions, removeTransaction, loading, setAddTransactionOpen, setEditingTransaction } = useContext(AppDataContext);
+  const { transactions, tenants, removeTransaction, loading, setAddTransactionOpen, setEditingTransaction } = useContext(AppDataContext);
   const { toast } = useToast();
 
   const openTransactionForm = (tx: Transaction | null) => {
@@ -31,6 +31,7 @@ const LedgerContent = () => {
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
   const netSavings = totalIncome - totalExpense;
 
+  const pendingReceipts = tenants.filter(t => t.paymentStatus === 'due' || t.paymentStatus === 'overdue');
 
   const categoryIcons = {
     'Rent Received': <HandCoins className="h-full w-full" />,
@@ -55,6 +56,14 @@ const LedgerContent = () => {
       const domain = merchant.toLowerCase().replace(/\s+/g, '') + '.com';
       return `https://logo.clearbit.com/${domain}`;
   }
+  
+  const paymentStatusColors: { [key in Tenant['paymentStatus']]: string } = {
+    paid: 'bg-green-100 text-green-800 border-green-200',
+    due: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    overdue: 'bg-red-100 text-red-800 border-red-200',
+    partial: 'bg-orange-100 text-orange-800 border-orange-200',
+  };
+
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8 animate-in fade-in-50">
@@ -91,6 +100,55 @@ const LedgerContent = () => {
                 </CardContent>
             </Card>
         </div>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Generated Rental Receipts</CardTitle>
+                <CardDescription>Status of pending rent payments for which receipts have been generated.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {loading ? <p>Loading receipts...</p> : pendingReceipts.length === 0 ? (
+                     <div className="text-center py-8">
+                        <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 className="mt-4 text-lg font-semibold">No Pending Receipts</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">Generate a receipt from the dashboard to start a payment cycle.</p>
+                    </div>
+                ) : (
+                    <div className="divide-y divide-border">
+                        {pendingReceipts.map(tenant => {
+                            const dueDate = tenant.lastReceiptGenerationDate ? add(new Date(tenant.lastReceiptGenerationDate), { days: tenant.netTerms || 0 }) : null;
+                            return (
+                                <div key={tenant.id} className="flex items-center justify-between py-3">
+                                    <div className="flex items-center gap-4">
+                                        <Avatar className="h-10 w-10 border">
+                                          <AvatarImage src={`https://i.pravatar.cc/150?u=${tenant.id}`} />
+                                          <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                          <p className="font-medium">{tenant.name}</p>
+                                          {dueDate && 
+                                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                                <Clock className="h-3 w-3"/>
+                                                Due by {format(dueDate, 'PPP')}
+                                            </p>
+                                          }
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-right">
+                                            <p className="font-semibold text-primary">₹{tenant.rentAmount.toLocaleString()}</p>
+                                            <Badge variant="outline" className={cn("capitalize", paymentStatusColors[tenant.paymentStatus])}>
+                                                {tenant.paymentStatus}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
 
         <Card>
             <CardHeader>
@@ -175,3 +233,5 @@ export default function LedgerPage() {
         </Suspense>
     )
 }
+
+    
