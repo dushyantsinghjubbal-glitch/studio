@@ -80,15 +80,15 @@ export default function FinPropDashboard() {
     }, {} as Record<string, number>);
 
   const categoryColors: { [key: string]: string } = {
-    'Rent Received': "#6366f1",
-    'Salary': "#34d399",
-    'Other': "#a855f7",
+    'Rent Received': "hsl(var(--chart-1))",
+    'Salary': "hsl(var(--chart-2))",
+    'Other': "hsl(var(--chart-3))",
   };
 
   const pieChartData = Object.entries(incomeByCategory).map(([name, value]) => ({
       name,
       value,
-      color: categoryColors[name] || '#f472b6',
+      color: categoryColors[name] || 'hsl(var(--chart-4))',
   }));
 
   const monthlyData = transactions.reduce((acc, curr) => {
@@ -123,7 +123,7 @@ export default function FinPropDashboard() {
         >
           Hello, {welcomeName} 👋
         </h1>
-        <p className="mb-6 text-gray-600 dark:text-gray-400">
+        <p className="text-gray-600 dark:text-gray-400">
           Here’s your financial overview.
         </p>
 
@@ -162,8 +162,8 @@ export default function FinPropDashboard() {
                         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${Number(value) / 1000}k`} />
                         <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", radius: 'var(--radius)' }} />
                         <Legend iconSize={10} />
-                        <Bar dataKey="income" fill="hsl(var(--chart-2))" name="Income" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="expense" fill="hsl(var(--chart-5))" name="Expense" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="income" fill="hsl(var(--chart-1))" name="Income" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="expense" fill="hsl(var(--chart-4))" name="Expense" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
                 ) : (
