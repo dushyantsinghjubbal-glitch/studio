@@ -259,28 +259,34 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         return doc(firestore, 'users', user.uid).withConverter(userProfileConverter);
     }, [firestore, user, shouldFetchProfile]);
 
-    const { data: tenants, isLoading: tenantsLoading, error: tenantsError } = useCollection<Tenant>(tenantsQuery);
+    const { data: tenantsData, isLoading: tenantsLoading, error: tenantsError } = useCollection<Tenant>(tenantsQuery);
     const { data: properties, isLoading: propertiesLoading, error: propertiesError } = useCollection<Property>(propertiesQuery);
     const { data: transactions, isLoading: transactionsLoading, error: transactionsError } = useCollection<Transaction>(transactionsQuery);
     const { data: userProfile, isLoading: profileLoading, error: profileError } = useDoc<UserProfile>(userProfileRef);
     
     useEffect(() => {
-        if (tenants) {
+        if (tenantsData) {
             const now = new Date();
-            const updatedTenants = tenants.map(tenant => {
+            const updatedTenants = tenantsData.map(tenant => {
+                let newStatus = tenant.paymentStatus;
+
+                // Only check for overdue if a receipt has been generated
                 if (tenant.paymentStatus === 'due' && tenant.lastReceiptGenerationDate) {
                     const dueDate = add(new Date(tenant.lastReceiptGenerationDate), { days: tenant.netTerms || 0 });
                     if (isAfter(now, dueDate)) {
-                        return { ...tenant, paymentStatus: 'overdue' };
+                        newStatus = 'overdue';
                     }
                 }
-                return tenant;
+                return { ...tenant, paymentStatus: newStatus };
             });
             setProcessedTenants(updatedTenants);
+        } else {
+             setProcessedTenants([]);
         }
-    }, [tenants]);
+    }, [tenantsData]);
 
     const addTenant = async (tenantData: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt' > & { propertyId?: string }) => {
+        if (!properties) return;
         const newId = doc(collection(firestore, 'tenants')).id;
         const now = new Date().toISOString();
         const property = properties.find(p => p.id === tenantData.propertyId);
@@ -307,7 +313,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
     
     const triggerReceiptGeneration = async (tenantId: string, month: string, paymentDate: Date) => {
-        const tenant = tenants?.find(t => t.id === tenantId);
+        const tenant = processedTenants.find(t => t.id === tenantId);
         if (tenant) {
             await updateTenant({
                 ...tenant,
@@ -353,7 +359,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
 
         // If it's a rent payment, update the tenant status
         if (dataToSave.category === 'Rent Received' && dataToSave.tenantId) {
-            const tenant = tenants?.find(t => t.id === dataToSave.tenantId);
+            const tenant = processedTenants.find(t => t.id === dataToSave.tenantId);
             if (tenant) {
                 const paymentMonth = format(new Date(dataToSave.date as string), 'MMMM');
                 await updateTenant({ 
