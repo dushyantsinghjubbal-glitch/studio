@@ -68,9 +68,6 @@ const TenantsContent = () => {
         if (selectedProperty) {
             tenantForm.setValue('propertyName', selectedProperty.name);
             tenantForm.setValue('rentAmount', selectedProperty.rentAmount);
-            if (selectedProperty.rentDueDate) {
-                // tenantForm.setValue('dueDate', new Date(selectedProperty.rentDueDate));
-            }
         }
     }
   }, [selectedPropertyId, properties, tenantForm]);
@@ -230,14 +227,8 @@ const TenantsContent = () => {
         }}>
             <DialogContent 
                 className="sm:max-w-2xl"
-                onInteractOutside={(e) => {
-                    e.preventDefault();
-                }}
-                onEscapeKeyDown={(e) => {
-                    e.preventDefault();
-                    setIsTenantFormOpen(false);
-                    router.replace('/tenants');
-                }}
+                onInteractOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()}
             >
                 <DialogHeader>
                     <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</DialogTitle>

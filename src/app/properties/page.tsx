@@ -231,10 +231,16 @@ const PropertiesContent = () => {
         </Card>
         
         <Dialog open={isPropertyFormOpen} onOpenChange={(isOpen) => {
-            setIsPropertyFormOpen(isOpen);
-            if (!isOpen) router.replace('/properties');
+            if (!isOpen) {
+                setIsPropertyFormOpen(false);
+                router.replace('/properties');
+            }
         }}>
-            <DialogContent className="sm:max-w-3xl">
+            <DialogContent 
+                className="sm:max-w-3xl"
+                onInteractOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>{editingProperty ? 'Edit Property' : 'Add New Property'}</DialogTitle>
                 </DialogHeader>

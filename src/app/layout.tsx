@@ -204,7 +204,10 @@ function GlobalDialogs() {
         <>
             {/* AI Receipt Scanner Dialog */}
             <Dialog open={isScanReceiptOpen} onOpenChange={setScanReceiptOpen}>
-                <DialogContent>
+                <DialogContent 
+                    onInteractOutside={(e) => e.preventDefault()}
+                    onEscapeKeyDown={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle>Scan Receipt with AI</DialogTitle>
                         <DialogDescription>Upload a receipt image and let AI extract the details for you.</DialogDescription>
@@ -222,8 +225,8 @@ function GlobalDialogs() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => {
-                        setScanReceiptOpen(false);
-                        setSelectedFile(null);
+                            setScanReceiptOpen(false);
+                            setSelectedFile(null);
                         }}>Cancel</Button>
                         <Button onClick={handleAiSubmit} disabled={!selectedFile || isProcessing}>
                             {isProcessing ? 'Analyzing...' : 'Extract Details'}
@@ -250,23 +253,10 @@ function GlobalDialogs() {
 
 
             {/* Manual Transaction Form Dialog */}
-            <Dialog open={isAddTransactionOpen} onOpenChange={(open) => {
-                if (extractedData && !open) {
-                    return;
-                }
-                setAddTransactionOpen(open);
-            }}>
+            <Dialog open={isAddTransactionOpen} onOpenChange={setAddTransactionOpen}>
                 <DialogContent className="sm:max-w-md" 
-                    onInteractOutside={(e) => {
-                        if (extractedData) {
-                            e.preventDefault();
-                        }
-                    }}
-                    onEscapeKeyDown={(e) => {
-                        if (extractedData) {
-                            e.preventDefault();
-                        }
-                    }}
+                    onInteractOutside={(e) => e.preventDefault()}
+                    onEscapeKeyDown={(e) => e.preventDefault()}
                 >
                     <DialogHeader>
                         <DialogTitle>{editingTransaction ? 'Edit Transaction' : (extractedData ? 'Confirm Transaction' : 'Add Transaction')}</DialogTitle>
