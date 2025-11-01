@@ -2,9 +2,8 @@
 
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarItem, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { Home, Users, Building, LogOut, Wallet, Plus, Receipt, FileText, User as UserIcon, Cog } from 'lucide-react';
+import { Home, Users, Building, LogOut, Wallet, Plus, Receipt, FileText, User as UserIcon, Cog, Sun, Moon, Book } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppDataContext, AppDataProvider, Tenant, Transaction } from '@/context/AppDataContext';
 import { FirebaseClientProvider, useUser, useAuth } from '@/firebase';
@@ -30,6 +29,7 @@ import { recognizeTransaction, RecognizeTransactionInput } from '@/ai/flows/reco
 import { Textarea } from '@/components/ui/textarea';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { motion } from 'framer-motion';
 
 
 const transactionSchema = z.object({
@@ -569,65 +569,6 @@ function GlobalDialogs() {
     );
 }
 
-function UserMenu() {
-    const { user } = useUser();
-    const auth = useAuth();
-    const router = useRouter();
-
-    if (!user || user.isAnonymous) {
-        return (
-            <Button asChild variant="outline">
-                <Link href="/login">Login</Link>
-            </Button>
-        );
-    }
-    
-    const handleSignOut = async () => {
-        if (auth) {
-            await signOut(auth);
-        }
-    };
-    
-    const getInitials = (name?: string | null, email?: string | null) => {
-        if (name) {
-            const nameParts = name.split(' ');
-            if (nameParts.length > 1) {
-                return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
-            }
-            return name.substring(0, 2).toUpperCase();
-        }
-        if (email) {
-            return email.substring(0, 2).toUpperCase();
-        }
-        return 'U';
-    };
-
-
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar className="h-10 w-10 border-2 border-primary">
-                        <AvatarImage src={`https://api.dicebear.com/8.x/adventurer/svg?seed=${user.uid}`} alt={user.displayName || user.email || 'User'} />
-                        <AvatarFallback>{getInitials(user.displayName, user.email)}</AvatarFallback>
-                    </Avatar>
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-                 <DropdownMenuItem onClick={() => router.push('/profile')}>
-                    <Cog className="mr-2 h-4 w-4" />
-                    <span>Profile Settings</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
-    );
-}
-
 function FloatingActionButton() {
   const router = useRouter();
   const pathname = usePathname();
@@ -686,9 +627,137 @@ function FloatingActionButton() {
   );
 }
 
-function NavMenu() {
+function SidebarNav() {
+    const [darkMode, setDarkMode] = useState(false);
+    const { user } = useUser();
+    const auth = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        const isDark = document.documentElement.classList.contains('dark');
+        setDarkMode(isDark);
+    }, []);
+
+    const toggleDarkMode = () => {
+        if (darkMode) {
+            document.documentElement.classList.remove("dark");
+        } else {
+            document.documentElement.classList.add("dark");
+        }
+        setDarkMode(!darkMode);
+    };
+    
+    const handleSignOut = async () => {
+        if (auth) {
+            await signOut(auth);
+            router.push('/login');
+        }
+    };
+
+    const menuItems = [
+      { name: "Dashboard", icon: Home, href: "/" },
+      { name: "Ledger", icon: Book, href: "/ledger" },
+      { name: "Tenants", icon: Users, href: "/tenants" },
+      { name: "Properties", icon: Building, href: "/properties" },
+    ];
+    
+    const getInitials = (name?: string | null, email?: string | null) => {
+        if (name) {
+            const nameParts = name.split(' ');
+            if (nameParts.length > 1) {
+                return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+        if (email) {
+            return email.substring(0, 2).toUpperCase();
+        }
+        return 'U';
+    };
+
+
     return (
-        <></>
+        <aside className="w-20 md:w-60 bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg flex flex-col items-center md:items-start py-6 px-2 rounded-r-3xl border-r border-purple-100 dark:border-gray-800">
+            <motion.div
+              className="mb-8 flex items-center gap-2"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 120 }}
+            >
+              <div className="bg-gradient-to-r from-blue-400 to-purple-500 p-3 rounded-2xl shadow-md text-white font-bold text-lg">
+                FP
+              </div>
+              <span className="hidden md:block font-semibold text-gray-700 dark:text-gray-200">
+                FinProp
+              </span>
+            </motion.div>
+
+            <nav className="flex flex-col gap-4 w-full flex-1">
+              {menuItems.map((item) => (
+                <Link href={item.href} key={item.name}>
+                  <motion.div
+                    whileHover={{ scale: 1.07 }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all"
+                  >
+                    <item.icon
+                      className="text-blue-500 bg-blue-100 dark:text-blue-300 dark:bg-gray-800 p-2 rounded-xl"
+                      size={28}
+                    />
+                    <span className="hidden md:block font-medium">
+                      {item.name}
+                    </span>
+                  </motion.div>
+                </Link>
+              ))}
+            </nav>
+
+            <div className="flex flex-col gap-2 w-full">
+                <button
+                  onClick={toggleDarkMode}
+                  className="flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all"
+                  title="Toggle dark mode"
+                >
+                    {darkMode ? (
+                        <Sun className="text-yellow-400 bg-gray-800 p-2 rounded-xl" size={28} />
+                    ) : (
+                        <Moon className="text-indigo-500 bg-blue-100 p-2 rounded-xl" size={28} />
+                    )}
+                     <span className="hidden md:block font-medium">
+                        Toggle Theme
+                    </span>
+                </button>
+                
+                {user && !user.isAnonymous && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                             <div
+                                className="flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all"
+                              >
+                                <Avatar className="h-10 w-10 border-2 border-primary">
+                                    <AvatarImage src={`https://api.dicebear.com/8.x/adventurer/svg?seed=${user.uid}`} alt={user.displayName || user.email || 'User'} />
+                                    <AvatarFallback>{getInitials(user.displayName, user.email)}</AvatarFallback>
+                                </Avatar>
+                                <div className="hidden md:flex flex-col">
+                                     <span className="font-medium text-sm truncate max-w-28">{user.displayName || user.email}</span>
+                                     <span className="text-xs text-muted-foreground">View Profile</span>
+                                </div>
+                              </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56 mb-2 ml-2" align="start" side="right" forceMount>
+                             <DropdownMenuItem onClick={() => router.push('/profile')}>
+                                <Cog className="mr-2 h-4 w-4" />
+                                <span>Profile Settings</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleSignOut}>
+                                <LogOut className="mr-2 h-4 w-4" />
+                                <span>Log out</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                )}
+            </div>
+        </aside>
     )
 }
 
@@ -710,8 +779,13 @@ export default function RootLayout({
       <body className="font-body antialiased" style={{ fontFamily: "'Poppins', sans-serif" }}>
         <FirebaseClientProvider>
           <AppDataProvider>
-            {children}
-            <FloatingActionButton />
+            <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-950 dark:to-black text-gray-800 dark:text-gray-100 transition-colors duration-500 font-sans">
+                <SidebarNav />
+                <main className="flex-1 p-6 md:p-10 overflow-y-auto relative">
+                    {children}
+                </main>
+                <FloatingActionButton />
+            </div>
             <GlobalDialogs />
           </AppDataProvider>
         </FirebaseClientProvider>
