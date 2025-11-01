@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { recognizeTransaction, RecognizeTransactionInput } from '@/ai/flows/recognize-tenant-payment';
 import { Textarea } from '@/components/ui/textarea';
 import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 
 const transactionSchema = z.object({
@@ -88,20 +89,20 @@ function GlobalDialogs() {
 
     useEffect(() => {
         if (isAddTransactionOpen && editingTransaction) {
-            form.reset({
+            transactionForm.reset({
                 ...editingTransaction,
                 date: new Date(editingTransaction.date),
             });
         } else if (isAddTransactionOpen && extractedData) {
-            form.reset({
-                ...form.getValues(),
+            transactionForm.reset({
+                ...transactionForm.getValues(),
                 ...extractedData,
                 date: extractedData.date ? new Date(extractedData.date) : new Date(),
             });
         } else if (!isAddTransactionOpen) {
             setEditingTransaction(null);
             setExtractedData(null);
-            form.reset({
+            transactionForm.reset({
                 type: 'expense',
                 date: new Date(),
                 title: '',
@@ -183,18 +184,16 @@ function GlobalDialogs() {
     };
 
     const saveTransaction = async (data: TransactionFormValues) => {
-        const dataToSave = { ...data, receipt: data.receipt instanceof File ? data.receipt : undefined };
-
         if (editingTransaction) {
             await updateTransaction({
                 ...editingTransaction,
-                ...dataToSave,
+                ...data,
                 date: data.date.toISOString(),
             });
             toast({ title: 'Transaction Updated', description: 'Your transaction has been updated.' });
         } else {
             await addTransaction({
-                ...dataToSave,
+                ...data,
                 date: data.date.toISOString(),
             });
             toast({ title: 'Transaction Saved', description: 'Your transaction has been recorded.' });
@@ -238,7 +237,7 @@ function GlobalDialogs() {
         // Information
         doc.setFontSize(12);
         doc.text(`Receipt #: ${new Date().getTime()}`, 20, 50);
-        doc.text(`Payment Date: ${format(data.paymentDate, 'PPP')}`, 150, 50);
+        doc.text(`Payment Date: ${format(data.paymentDate, 'PPP')}`, 190, 50, { align: 'right' });
 
         // Line separator
         doc.setLineWidth(0.5);
@@ -262,7 +261,7 @@ function GlobalDialogs() {
         doc.line(20, 95, 190, 95);
 
         // Payment Details Table
-        doc.autoTable({
+        (doc as any).autoTable({
             startY: 100,
             head: [['Description', 'Amount']],
             body: [
@@ -297,37 +296,13 @@ function GlobalDialogs() {
         receiptForm.reset();
     };
 
-    // Auto-table plugin for jsPDF
-    (jsPDF.API as any).autoTable = (function() {
-        // In a real scenario, this would be the auto-table plugin code.
-        // For this environment, we'll mock the table drawing.
-        return function(options: any) {
-            const doc = this;
-            let y = options.startY || 20;
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text(options.head[0][0], 25, y);
-            doc.text(options.head[0][1], 150, y);
-            y += 7;
-            doc.setLineWidth(0.2);
-            doc.line(20, y-5, 190, y-5);
-            doc.line(20, y+2, 190, y+2);
-
-            doc.setFont('helvetica', 'normal');
-            doc.text(options.body[0][0], 25, y + 7);
-            doc.text(options.body[0][1], 150, y + 7);
-
-            (doc as any).lastAutoTable = { finalY: y + 10 };
-        };
-    })();
-
     return (
         <>
             {/* AI Receipt Scanner Dialog */}
             <Dialog open={isScanReceiptOpen} onOpenChange={setScanReceiptOpen}>
                 <DialogContent 
-                    onInteractOutside={(e) => e.preventDefault()}
-                    onEscapeKeyDown={(e) => e.preventDefault()}
+                    onInteractOutside={(e) => isProcessing && e.preventDefault()}
+                    onEscapeKeyDown={(e) => isProcessing && e.preventDefault()}
                 >
                     <DialogHeader>
                         <DialogTitle>Scan Receipt with AI</DialogTitle>
@@ -348,7 +323,7 @@ function GlobalDialogs() {
                         <Button variant="outline" onClick={() => {
                             setScanReceiptOpen(false);
                             setSelectedFile(null);
-                        }}>Cancel</Button>
+                        }} disabled={isProcessing}>Cancel</Button>
                         <Button onClick={handleAiSubmit} disabled={!selectedFile || isProcessing}>
                             {isProcessing ? 'Analyzing...' : 'Extract Details'}
                         </Button>
@@ -374,15 +349,17 @@ function GlobalDialogs() {
 
 
             {/* Manual Transaction Form Dialog */}
-            <Dialog open={isAddTransactionOpen} onOpenChange={setAddTransactionOpen}>
-                <DialogContent className="sm:max-w-md" onOpenChange={(open) => {
-                     if (!open) {
-                         setAddTransactionOpen(false);
-                         if (extractedData) setExtractedData(null);
-                     }
-                 }}
-                 onInteractOutside={(e) => { e.preventDefault(); }}
-                 onEscapeKeyDown={(e) => { e.preventDefault(); }}>
+            <Dialog open={isAddTransactionOpen} onOpenChange={(open) => {
+                 if (!open) {
+                     setAddTransactionOpen(false);
+                     if (extractedData) setExtractedData(null);
+                 } else {
+                    setAddTransactionOpen(true);
+                 }
+             }}>
+                <DialogContent className="sm:max-w-md" 
+                 onInteractOutside={(e) => e.preventDefault()}
+                 onEscapeKeyDown={(e) => e.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>{editingTransaction ? 'Edit Transaction' : (extractedData ? 'Confirm Transaction' : 'Add Transaction')}</DialogTitle>
                         <DialogDescription>
@@ -475,9 +452,7 @@ function GlobalDialogs() {
 
                         <DialogFooter className="px-6 pt-4 border-t mt-4">
                              <Button type="button" variant="outline" onClick={() => {
-                                if (extractedData) {
-                                    setExtractedData(null);
-                                }
+                                setExtractedData(null);
                                 setAddTransactionOpen(false);
                             }}>Cancel</Button>
                             <Button type="submit">Save Transaction</Button>
@@ -491,6 +466,8 @@ function GlobalDialogs() {
                  if (!open) {
                      setGenerateReceiptOpen(false);
                      receiptForm.reset();
+                 } else {
+                    setGenerateReceiptOpen(true);
                  }
             }}>
                 <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
@@ -498,7 +475,7 @@ function GlobalDialogs() {
                         <DialogTitle>Generate Rent Receipt</DialogTitle>
                         <DialogDescription>Select a tenant and payment details to generate a PDF receipt.</DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={receiptForm.handleSubmit(generatePdfReceipt)} className="grid gap-4 py-4">
+                    <form id="receipt-form" onSubmit={receiptForm.handleSubmit(generatePdfReceipt)} className="grid gap-4 py-4">
                         <div className="grid gap-2">
                             <Label htmlFor="tenantId-receipt">Tenant</Label>
                             <Controller
@@ -547,7 +524,7 @@ function GlobalDialogs() {
                     </form>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setGenerateReceiptOpen(false)}>Cancel</Button>
-                        <Button type="submit" form="receipt-form" onClick={receiptForm.handleSubmit(generatePdfReceipt)}>Generate PDF</Button>
+                        <Button type="submit" form="receipt-form">Generate PDF</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -757,3 +734,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    
