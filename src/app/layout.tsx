@@ -687,42 +687,8 @@ function FloatingActionButton() {
 }
 
 function NavMenu() {
-    const { setOpenMobile } = useSidebar();
     return (
-        <SidebarMenu>
-            <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Dashboard" onClick={() => setOpenMobile(false)}>
-                    <Link href="/">
-                        <Home />
-                        <span>Dashboard</span>
-                    </Link>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Ledger" onClick={() => setOpenMobile(false)}>
-                    <Link href="/ledger">
-                        <Wallet />
-                        <span>Ledger</span>
-                    </Link>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Tenants" onClick={() => setOpenMobile(false)}>
-                    <Link href="/tenants">
-                        <Users />
-                        <span>Tenants</span>
-                    </Link>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Properties" onClick={() => setOpenMobile(false)}>
-                    <Link href="/properties">
-                        <Building />
-                        <span>Properties</span>
-                    </Link>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-        </SidebarMenu>
+        <></>
     )
 }
 
@@ -744,32 +710,9 @@ export default function RootLayout({
       <body className="font-body antialiased" style={{ fontFamily: "'Poppins', sans-serif" }}>
         <FirebaseClientProvider>
           <AppDataProvider>
-              <SidebarProvider>
-                  <Sidebar>
-                      <SidebarHeader>
-                          <div className="flex items-center gap-2 p-2">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                                  <span className="text-sm font-bold">FP</span>
-                              </div>
-                              <span className="text-2xl font-bold tracking-tight">FinProp</span>
-                          </div>
-                      </SidebarHeader>
-                      <SidebarContent>
-                          <NavMenu />
-                      </SidebarContent>
-                       <SidebarFooter>
-                            <UserMenu />
-                        </SidebarFooter>
-                  </Sidebar>
-                  <SidebarInset>
-                      <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-                          <SidebarTrigger className="md:hidden"/>
-                      </header>
-                      {children}
-                      <FloatingActionButton />
-                      <GlobalDialogs />
-                  </SidebarInset>
-              </SidebarProvider>
+            {children}
+            <FloatingActionButton />
+            <GlobalDialogs />
           </AppDataProvider>
         </FirebaseClientProvider>
         <Toaster />
