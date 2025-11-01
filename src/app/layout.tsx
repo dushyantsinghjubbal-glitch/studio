@@ -677,7 +677,7 @@ function SidebarNav() {
 
 
     return (
-        <aside className="w-20 md:w-60 bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg flex flex-col items-center md:items-start py-6 px-2 rounded-r-3xl border-r border-purple-100 dark:border-gray-800">
+        <aside className="fixed left-0 top-0 h-screen w-20 md:w-60 bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg flex flex-col items-center md:items-start py-6 px-2 rounded-r-3xl border-r border-purple-100 dark:border-gray-800 z-40">
             <motion.div
               className="mb-8 flex items-center gap-2"
               initial={{ scale: 0 }}
@@ -781,7 +781,7 @@ export default function RootLayout({
           <AppDataProvider>
             <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-950 dark:to-black text-gray-800 dark:text-gray-100 transition-colors duration-500 font-sans">
                 <SidebarNav />
-                <main className="flex-1 p-6 md:p-10 overflow-y-auto relative">
+                <main className="flex-1 p-6 md:p-10 overflow-y-auto relative ml-20 md:ml-60">
                     {children}
                 </main>
                 <FloatingActionButton />
