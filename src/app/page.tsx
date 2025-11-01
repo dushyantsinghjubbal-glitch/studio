@@ -17,8 +17,9 @@ import {
   Legend,
 } from "recharts";
 import { AppDataContext } from "@/context/AppDataContext";
-import { format } from 'date-fns';
+import { format, startOfMonth, isAfter, isWithinInterval } from 'date-fns';
 import { useUser } from "@/firebase";
+import { Building, Users, AlertCircle, TrendingUp } from "lucide-react";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -50,13 +51,25 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 
 export default function FinPropDashboard() {
-  const { transactions } = useContext(AppDataContext);
+  const { transactions, properties, tenants } = useContext(AppDataContext);
   const { user } = useUser();
 
   // --- Data processing ---
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
   const netBalance = totalIncome - totalExpense;
+
+  const totalProperties = properties.length;
+  const totalTenants = tenants.length;
+  const pendingRentsCount = tenants.filter(t => t.paymentStatus === 'due' || t.paymentStatus === 'overdue').length;
+
+  const now = new Date();
+  const startOfCurrentMonth = startOfMonth(now);
+  const currentMonthTransactions = transactions.filter(t => isAfter(new Date(t.date), startOfCurrentMonth));
+  const monthlyIncome = currentMonthTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+  const monthlyExpense = currentMonthTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+  const monthlyNet = monthlyIncome - monthlyExpense;
+
 
   const incomeByCategory = transactions
     .filter(t => t.type === 'income')
@@ -95,42 +108,42 @@ export default function FinPropDashboard() {
 
   // --- UI Data ---
   const summaryCards = [
-    { title: "Total Income", amount: totalIncome, color: "bg-blue-100 dark:bg-blue-900/40", icon: "💰" },
-    { title: "Total Expenses", amount: totalExpense, color: "bg-red-100 dark:bg-red-900/40", icon: "💸" },
-    { title: "Net Balance", amount: netBalance, color: "bg-green-100 dark:bg-green-900/40", icon: "📈" },
+    { title: "Total Properties", value: totalProperties, icon: <Building size={24} className="text-blue-500" />, color: "bg-blue-100 dark:bg-blue-900/40" },
+    { title: "Total Tenants", value: totalTenants, icon: <Users size={24} className="text-green-500" />, color: "bg-green-100 dark:bg-green-900/40" },
+    { title: "Pending Rents", value: pendingRentsCount, icon: <AlertCircle size={24} className="text-red-500" />, color: "bg-red-100 dark:bg-red-900/40" },
+    { title: "Net This Month", value: `₹${monthlyNet.toLocaleString()}`, icon: <TrendingUp size={24} className="text-purple-500" />, color: "bg-purple-100 dark:bg-purple-900/40" },
   ];
   
   const welcomeName = user?.displayName || user?.email?.split('@')[0] || 'Welcome Back';
 
   return (
-    <>
-        <motion.h1
+    <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="flex flex-1 flex-col gap-6">
+        <h1
           className="text-3xl font-bold mb-2"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
         >
           Hello, {welcomeName} 👋
-        </motion.h1>
+        </h1>
         <p className="mb-6 text-gray-600 dark:text-gray-400">
           Here’s your financial overview.
         </p>
 
         {/* Summary Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {summaryCards.map((card) => (
             <motion.div
               key={card.title}
               whileHover={{ scale: 1.03 }}
               className={`rounded-3xl ${card.color} p-6 shadow-md hover:shadow-xl border border-white/20`}
             >
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-3xl">{card.icon}</span>
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-white/70">
+                    {card.icon}
+                </div>
               </div>
               <h2 className="text-lg font-semibold">{card.title}</h2>
               <div className="flex justify-between items-end mt-2">
-                <span className={`text-2xl font-bold ${card.amount < 0 ? 'text-red-500' : ''}`}>
-                    ₹{card.amount.toLocaleString()}
+                <span className={`text-3xl font-bold ${typeof card.value === 'number' && card.value < 0 ? 'text-red-500' : ''}`}>
+                    {card.value}
                 </span>
               </div>
             </motion.div>
@@ -204,6 +217,6 @@ export default function FinPropDashboard() {
               )}
             </div>
         </div>
-    </>
+    </motion.main>
   );
 }
