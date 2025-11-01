@@ -27,7 +27,6 @@ import { Badge } from '@/components/ui/badge';
 const tenantSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     rentAmount: z.coerce.number().min(1, 'Rent must be a positive number'),
-    dueDate: z.date({ required_error: "Due date is required."}),
     phone: z.string().optional(),
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
     propertyId: z.string().optional(),
@@ -70,7 +69,7 @@ const TenantsContent = () => {
             tenantForm.setValue('propertyName', selectedProperty.name);
             tenantForm.setValue('rentAmount', selectedProperty.rentAmount);
             if (selectedProperty.rentDueDate) {
-                tenantForm.setValue('dueDate', new Date(selectedProperty.rentDueDate));
+                // tenantForm.setValue('dueDate', new Date(selectedProperty.rentDueDate));
             }
         }
     }
@@ -83,7 +82,6 @@ const TenantsContent = () => {
         tenantForm.reset({
             name: tenant.name,
             rentAmount: tenant.rentAmount,
-            dueDate: new Date(tenant.dueDate),
             phone: tenant.phone || '',
             email: tenant.email || '',
             propertyName: tenant.propertyName,
@@ -95,7 +93,6 @@ const TenantsContent = () => {
         tenantForm.reset({
             name: '',
             rentAmount: 0,
-            dueDate: undefined,
             phone: '',
             email: '',
             propertyName: '',
@@ -200,9 +197,6 @@ const TenantsContent = () => {
                                      <div className="text-sm text-muted-foreground">
                                         Rent: <span className="font-semibold text-foreground">₹{tenant.rentAmount.toLocaleString()}</span>
                                     </div>
-                                    <div className="text-sm text-muted-foreground">
-                                        Due on: <span className="font-semibold text-foreground">{format(new Date(tenant.dueDate), 'do MMMM')}</span>
-                                    </div>
                                 </CardContent>
                                 <CardFooter>
                                     <Badge 
@@ -230,12 +224,20 @@ const TenantsContent = () => {
             if (!isOpen) {
               setIsTenantFormOpen(false);
               router.replace('/tenants');
+            } else {
+              setIsTenantFormOpen(true);
             }
         }}>
             <DialogContent 
                 className="sm:max-w-2xl"
-                onInteractOutside={(e) => e.preventDefault()}
-                onEscapeKeyDown={(e) => e.preventDefault()}
+                onInteractOutside={(e) => {
+                    e.preventDefault();
+                }}
+                onEscapeKeyDown={(e) => {
+                    e.preventDefault();
+                    setIsTenantFormOpen(false);
+                    router.replace('/tenants');
+                }}
             >
                 <DialogHeader>
                     <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</DialogTitle>
@@ -292,40 +294,6 @@ const TenantsContent = () => {
                         </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="grid gap-2">
-                           <Label htmlFor="dueDate">Due Date</Label>                            <Controller
-                                control={tenantForm.control}
-                                name="dueDate"
-                                render={({ field }) => (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant={"outline"}
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal",
-                                                    !field.value && "text-muted-foreground"
-                                                )}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={field.onChange}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                )}
-                            />
-                            {tenantForm.formState.errors.dueDate && <p className="text-red-500 text-xs">{tenantForm.formState.errors.dueDate.message}</p>}
-                        </div>
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label>Payment Method</Label>

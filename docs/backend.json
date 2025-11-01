@@ -119,11 +119,6 @@ fromat": "date",
           "type": "number",
           "description": "Monthly rent amount."
         },
-        "dueDate": {
-          "type": "string",
-          "description": "Rent due day each month.",
-          "format": "date"
-        },
         "netTerms": {
           "type": "number",
           "description": "Payment grace period in days (e.g., 5 for Net 5)."
@@ -177,7 +172,6 @@ fromat": "date",
         "name",
         "propertyName",
         "rentAmount",
-        "dueDate",
         "paymentMethod",
         "paymentStatus",
         "createdAt",

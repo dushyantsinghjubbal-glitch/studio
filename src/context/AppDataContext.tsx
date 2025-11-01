@@ -35,7 +35,6 @@ export type Tenant = {
     propertyName: string;
     propertyAddress: string;
     rentAmount: number;
-    dueDate: Date;
     netTerms?: number;
     paymentMethod: 'cash' | 'bank' | 'upi' | 'other';
     lastPaymentMonth?: string;
@@ -90,10 +89,8 @@ const propertyConverter = {
 const tenantConverter = {
     toFirestore: (tenant: Omit<Tenant, 'id'> | Tenant) => {
         const data: any = { ...tenant };
-        delete (data as Partial<Tenant>).depositAmount; // no longer in use
         return {
             ...data,
-            dueDate: tenant.dueDate,
             netTerms: tenant.netTerms || 0,
             createdAt: 'createdAt' in tenant ? tenant.createdAt : new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -104,7 +101,6 @@ const tenantConverter = {
         return {
             id: snapshot.id,
             ...data,
-            dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : new Date(data.dueDate),
             createdAt: data.createdAt,
             updatedAt: data.updatedAt,
         } as Tenant;
@@ -281,8 +277,13 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
 
     const addTransaction = async (transactionData: Omit<Transaction, 'id'> & { receipt?: File }) => {
         const colRef = collection(firestore, 'transactions').withConverter(transactionConverter);
-        // The converter will handle removing the 'receipt' field if it exists
-        const docRef = await addDocumentNonBlocking(colRef, transactionData);
+        
+        const dataToSave = { ...transactionData };
+        if (!dataToSave.receipt) {
+            delete dataToSave.receipt;
+        }
+
+        const docRef = await addDocumentNonBlocking(colRef, dataToSave);
         // TODO: Handle receipt file upload if present
         return docRef?.id;
     };
