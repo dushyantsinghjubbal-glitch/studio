@@ -4,9 +4,9 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarItem, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { Home, Users, Building, LogOut, Wallet, Plus, Receipt } from 'lucide-react';
+import { Home, Users, Building, LogOut, Wallet, Plus, Receipt, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AppDataContext, AppDataProvider, Transaction } from '@/context/AppDataContext';
+import { AppDataContext, AppDataProvider, Tenant, Transaction } from '@/context/AppDataContext';
 import { FirebaseClientProvider, useUser, useAuth } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -28,6 +28,7 @@ import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { recognizeTransaction, RecognizeTransactionInput } from '@/ai/flows/recognize-tenant-payment';
 import { Textarea } from '@/components/ui/textarea';
+import jsPDF from 'jspdf';
 
 
 const transactionSchema = z.object({
@@ -45,12 +46,20 @@ const transactionSchema = z.object({
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
 
+const receiptSchema = z.object({
+    tenantId: z.string().min(1, "Please select a tenant."),
+    paymentDate: z.date(),
+    month: z.string().min(1, "Please select a month."),
+});
+type ReceiptFormValues = z.infer<typeof receiptSchema>;
+
 
 function GlobalDialogs() {
     const { 
         properties, tenants, transactions, addTransaction, updateTransaction,
         isAddTransactionOpen, setAddTransactionOpen, 
         isScanReceiptOpen, setScanReceiptOpen, 
+        isGenerateReceiptOpen, setGenerateReceiptOpen,
         editingTransaction, setEditingTransaction,
         extractedData, setExtractedData,
     } = useContext(AppDataContext);
@@ -61,12 +70,20 @@ function GlobalDialogs() {
     const [stagedTransaction, setStagedTransaction] = useState<TransactionFormValues | null>(null);
 
 
-    const form = useForm<TransactionFormValues>({
+    const transactionForm = useForm<TransactionFormValues>({
         resolver: zodResolver(transactionSchema),
         defaultValues: {
             type: 'expense',
             date: new Date(),
         }
+    });
+    
+    const receiptForm = useForm<ReceiptFormValues>({
+        resolver: zodResolver(receiptSchema),
+        defaultValues: {
+            paymentDate: new Date(),
+            month: format(new Date(), 'MMMM'),
+        },
     });
 
     useEffect(() => {
@@ -97,7 +114,7 @@ function GlobalDialogs() {
                 merchant: '',
             });
         }
-    }, [isAddTransactionOpen, editingTransaction, extractedData, form, setEditingTransaction, setExtractedData]);
+    }, [isAddTransactionOpen, editingTransaction, extractedData, transactionForm, setEditingTransaction, setExtractedData]);
     
     const fileToDataUri = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -166,16 +183,18 @@ function GlobalDialogs() {
     };
 
     const saveTransaction = async (data: TransactionFormValues) => {
+        const dataToSave = { ...data, receipt: data.receipt instanceof File ? data.receipt : undefined };
+
         if (editingTransaction) {
             await updateTransaction({
                 ...editingTransaction,
-                ...data,
+                ...dataToSave,
                 date: data.date.toISOString(),
             });
             toast({ title: 'Transaction Updated', description: 'Your transaction has been updated.' });
         } else {
             await addTransaction({
-                ...data,
+                ...dataToSave,
                 date: data.date.toISOString(),
             });
             toast({ title: 'Transaction Saved', description: 'Your transaction has been recorded.' });
@@ -199,6 +218,108 @@ function GlobalDialogs() {
         setStagedTransaction(null);
     }
 
+    const generatePdfReceipt = (data: ReceiptFormValues) => {
+        const tenant = tenants.find(t => t.id === data.tenantId);
+        if (!tenant) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected tenant.' });
+            return;
+        }
+
+        const doc = new jsPDF();
+        
+        // Header
+        doc.setFontSize(22);
+        doc.setFont('helvetica', 'bold');
+        doc.text("FinProp", 105, 20, { align: 'center' });
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'normal');
+        doc.text("Rent Receipt", 105, 30, { align: 'center' });
+
+        // Information
+        doc.setFontSize(12);
+        doc.text(`Receipt #: ${new Date().getTime()}`, 20, 50);
+        doc.text(`Payment Date: ${format(data.paymentDate, 'PPP')}`, 150, 50);
+
+        // Line separator
+        doc.setLineWidth(0.5);
+        doc.line(20, 55, 190, 55);
+
+        // Tenant and Property Info
+        doc.setFont('helvetica', 'bold');
+        doc.text("TENANT:", 20, 70);
+        doc.setFont('helvetica', 'normal');
+        doc.text(tenant.name, 50, 70);
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text("PROPERTY:", 20, 80);
+        doc.setFont('helvetica', 'normal');
+        doc.text(tenant.propertyName, 50, 80);
+        if (tenant.propertyAddress) {
+             doc.text(tenant.propertyAddress, 50, 85);
+        }
+
+        // Line separator
+        doc.line(20, 95, 190, 95);
+
+        // Payment Details Table
+        doc.autoTable({
+            startY: 100,
+            head: [['Description', 'Amount']],
+            body: [
+                [`Rent for the month of ${data.month}`, `₹${tenant.rentAmount.toLocaleString()}`],
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: [33, 150, 243] },
+        });
+
+        // Total
+        let finalY = (doc as any).lastAutoTable.finalY;
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text("Total Paid:", 140, finalY + 10);
+        doc.text(`₹${tenant.rentAmount.toLocaleString()}`, 190, finalY + 10, { align: 'right' });
+        
+        // Paid Stamp
+        doc.setFontSize(60);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(142, 76, 36); // Accent color
+        doc.text("PAID", 105, 160, { align: 'center', angle: -25 });
+
+        // Footer
+        doc.setFontSize(10);
+        doc.setTextColor(150);
+        doc.text("Thank you for your payment!", 105, 280, { align: 'center' });
+
+        doc.save(`Receipt-${tenant.name.replace(' ', '_')}-${data.month}.pdf`);
+
+        toast({ title: 'Receipt Generated', description: 'The PDF receipt has been downloaded.' });
+        setGenerateReceiptOpen(false);
+        receiptForm.reset();
+    };
+
+    // Auto-table plugin for jsPDF
+    (jsPDF.API as any).autoTable = (function() {
+        // In a real scenario, this would be the auto-table plugin code.
+        // For this environment, we'll mock the table drawing.
+        return function(options: any) {
+            const doc = this;
+            let y = options.startY || 20;
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text(options.head[0][0], 25, y);
+            doc.text(options.head[0][1], 150, y);
+            y += 7;
+            doc.setLineWidth(0.2);
+            doc.line(20, y-5, 190, y-5);
+            doc.line(20, y+2, 190, y+2);
+
+            doc.setFont('helvetica', 'normal');
+            doc.text(options.body[0][0], 25, y + 7);
+            doc.text(options.body[0][1], 150, y + 7);
+
+            (doc as any).lastAutoTable = { finalY: y + 10 };
+        };
+    })();
 
     return (
         <>
@@ -254,32 +375,36 @@ function GlobalDialogs() {
 
             {/* Manual Transaction Form Dialog */}
             <Dialog open={isAddTransactionOpen} onOpenChange={setAddTransactionOpen}>
-                <DialogContent className="sm:max-w-md" 
-                    onInteractOutside={(e) => e.preventDefault()}
-                    onEscapeKeyDown={(e) => e.preventDefault()}
-                >
+                <DialogContent className="sm:max-w-md" onOpenChange={(open) => {
+                     if (!open) {
+                         setAddTransactionOpen(false);
+                         if (extractedData) setExtractedData(null);
+                     }
+                 }}
+                 onInteractOutside={(e) => { e.preventDefault(); }}
+                 onEscapeKeyDown={(e) => { e.preventDefault(); }}>
                     <DialogHeader>
                         <DialogTitle>{editingTransaction ? 'Edit Transaction' : (extractedData ? 'Confirm Transaction' : 'Add Transaction')}</DialogTitle>
                         <DialogDescription>
                             {editingTransaction ? 'Update the details for your transaction.' : (extractedData ? 'Review the details extracted by the AI and save.' : 'Fill in the details for the new transaction.')}
                         </DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-6 -mx-6">
+                    <form onSubmit={transactionForm.handleSubmit(handleFormSubmit)} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto px-6 -mx-6">
                         <div className="grid gap-2 px-6">
                             <Label htmlFor="title">Title</Label>
-                            <Input id="title" {...form.register('title')} />
-                            {form.formState.errors.title && <p className="text-red-500 text-xs">{form.formState.errors.title.message}</p>}
+                            <Input id="title" {...transactionForm.register('title')} />
+                            {transactionForm.formState.errors.title && <p className="text-red-500 text-xs">{transactionForm.formState.errors.title.message}</p>}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 px-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="amount">Amount</Label>
-                                <Input id="amount" type="number" step="0.01" {...form.register('amount')} />
-                                {form.formState.errors.amount && <p className="text-red-500 text-xs">{form.formState.errors.amount.message}</p>}
+                                <Input id="amount" type="number" step="0.01" {...transactionForm.register('amount')} />
+                                {transactionForm.formState.errors.amount && <p className="text-red-500 text-xs">{transactionForm.formState.errors.amount.message}</p>}
                             </div>
                             <div className="grid gap-2">
                                 <Label>Type</Label>
-                                <Controller name="type" control={form.control} render={({ field }) => (
+                                <Controller name="type" control={transactionForm.control} render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
@@ -294,7 +419,7 @@ function GlobalDialogs() {
                         <div className="grid grid-cols-2 gap-4 px-6">
                             <div className="grid gap-2">
                                 <Label>Category</Label>
-                                <Controller name="category" control={form.control} render={({ field }) => (
+                                <Controller name="category" control={transactionForm.control} render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <SelectTrigger><SelectValue placeholder="Select..."/></SelectTrigger>
                                         <SelectContent>
@@ -310,7 +435,7 @@ function GlobalDialogs() {
                             </div>
                             <div className="grid gap-2">
                                 <Label>Date</Label>
-                                <Controller name="date" control={form.control} render={({ field }) => (
+                                <Controller name="date" control={transactionForm.control} render={({ field }) => (
                                     <Popover>
                                         <PopoverTrigger asChild>
                                             <Button variant="outline" className={cn('w-full justify-start text-left font-normal', !field.value && 'text-muted-foreground')}>
@@ -325,7 +450,7 @@ function GlobalDialogs() {
                         <div className="grid gap-2 px-6">
                             <Label>Related To (Optional)</Label>
                             <div className="grid grid-cols-2 gap-4">
-                                <Controller name="propertyId" control={form.control} render={({ field }) => (
+                                <Controller name="propertyId" control={transactionForm.control} render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <SelectTrigger><SelectValue placeholder="Property..."/></SelectTrigger>
                                         <SelectContent>
@@ -333,7 +458,7 @@ function GlobalDialogs() {
                                         </SelectContent>
                                     </Select>
                                 )} />
-                                <Controller name="tenantId" control={form.control} render={({ field }) => (
+                                <Controller name="tenantId" control={transactionForm.control} render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <SelectTrigger><SelectValue placeholder="Tenant..."/></SelectTrigger>
                                         <SelectContent>
@@ -345,7 +470,7 @@ function GlobalDialogs() {
                         </div>
                         <div className="grid gap-2 px-6">
                             <Label htmlFor="notes">Notes</Label>
-                            <Textarea id="notes" {...form.register('notes')} />
+                            <Textarea id="notes" {...transactionForm.register('notes')} />
                         </div>
 
                         <DialogFooter className="px-6 pt-4 border-t mt-4">
@@ -358,6 +483,72 @@ function GlobalDialogs() {
                             <Button type="submit">Save Transaction</Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Generate Receipt Dialog */}
+            <Dialog open={isGenerateReceiptOpen} onOpenChange={(open) => {
+                 if (!open) {
+                     setGenerateReceiptOpen(false);
+                     receiptForm.reset();
+                 }
+            }}>
+                <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+                    <DialogHeader>
+                        <DialogTitle>Generate Rent Receipt</DialogTitle>
+                        <DialogDescription>Select a tenant and payment details to generate a PDF receipt.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={receiptForm.handleSubmit(generatePdfReceipt)} className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="tenantId-receipt">Tenant</Label>
+                            <Controller
+                                name="tenantId"
+                                control={receiptForm.control}
+                                render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger id="tenantId-receipt"><SelectValue placeholder="Select a tenant..." /></SelectTrigger>
+                                        <SelectContent>
+                                            {tenants.map((t) => <SelectItem key={t.id} value={t.id}>{t.name} - {t.propertyName}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            />
+                            {receiptForm.formState.errors.tenantId && <p className="text-red-500 text-xs">{receiptForm.formState.errors.tenantId.message}</p>}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label>Payment Date</Label>
+                                <Controller name="paymentDate" control={receiptForm.control} render={({ field }) => (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" className={cn('w-full justify-start text-left font-normal', !field.value && 'text-muted-foreground')}>
+                                                {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                                    </Popover>
+                                )} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="month-receipt">Rent for Month</Label>
+                                <Controller name="month" control={receiptForm.control} render={({ field }) => (
+                                     <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger id="month-receipt"><SelectValue placeholder="Select month..." /></SelectTrigger>
+                                        <SelectContent>
+                                            {Array.from({ length: 12 }, (_, i) => format(new Date(0, i), 'MMMM')).map(m => (
+                                                <SelectItem key={m} value={m}>{m}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                )}/>
+                                {receiptForm.formState.errors.month && <p className="text-red-500 text-xs">{receiptForm.formState.errors.month.message}</p>}
+                            </div>
+                        </div>
+                    </form>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setGenerateReceiptOpen(false)}>Cancel</Button>
+                        <Button type="submit" form="receipt-form" onClick={receiptForm.handleSubmit(generatePdfReceipt)}>Generate PDF</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </>
@@ -420,7 +611,7 @@ function UserMenu() {
 function FloatingActionButton() {
   const router = useRouter();
   const pathname = usePathname();
-  const { setAddTransactionOpen, setScanReceiptOpen } = useContext(AppDataContext);
+  const { setAddTransactionOpen, setScanReceiptOpen, setGenerateReceiptOpen } = useContext(AppDataContext);
   const [isFabOpen, setIsFabOpen] = useState(false);
 
   const getFabContent = () => {
@@ -447,13 +638,17 @@ function FloatingActionButton() {
                 <Plus className="h-8 w-8" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-56 p-2 mb-2" align="end">
+            <PopoverContent className="w-60 p-2 mb-2" align="end">
               <div className="grid gap-1">
-                <Button variant="ghost" className="justify-start" onClick={() => { setAddTransactionOpen(true); setIsFabOpen(false); }}>
+                <Button variant="ghost" className="justify-start py-2 h-auto" onClick={() => { setGenerateReceiptOpen(true); setIsFabOpen(false); }}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Generate Receipt
+                </Button>
+                <Button variant="ghost" className="justify-start py-2 h-auto" onClick={() => { setAddTransactionOpen(true); setIsFabOpen(false); }}>
                   <Wallet className="mr-2 h-4 w-4" />
                   Add Transaction
                 </Button>
-                <Button variant="ghost" className="justify-start" onClick={() => { setScanReceiptOpen(true); setIsFabOpen(false); }}>
+                <Button variant="ghost" className="justify-start py-2 h-auto" onClick={() => { setScanReceiptOpen(true); setIsFabOpen(false); }}>
                   <Receipt className="mr-2 h-4 w-4" />
                   Scan Receipt
                 </Button>

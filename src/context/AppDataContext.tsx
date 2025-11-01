@@ -108,7 +108,7 @@ const transactionConverter = {
         data.tenantId = transaction.tenantId || null;
         data.merchant = transaction.merchant || null;
         // Don't store the File object in Firestore
-        if ('receipt' in data) {
+        if ('receipt' in data && data.receipt === undefined) {
             delete data.receipt;
         }
         return data;
@@ -124,7 +124,7 @@ const transactionConverter = {
 
 interface AppDataContextProps {
     tenants: Tenant[];
-    addTenant: (tenant: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt' >) => Promise<void>;
+    addTenant: (tenant: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt' | 'propertyAddress'> & { propertyId?: string }) => Promise<void>;
     updateTenant: (tenant: Tenant) => Promise<void>;
     removeTenant: (tenantId: string) => Promise<void>;
     properties: Property[];
@@ -141,6 +141,8 @@ interface AppDataContextProps {
     setAddTransactionOpen: (open: boolean) => void;
     isScanReceiptOpen: boolean;
     setScanReceiptOpen: (open: boolean) => void;
+    isGenerateReceiptOpen: boolean;
+    setGenerateReceiptOpen: (open: boolean) => void;
     editingTransaction: Transaction | null;
     setEditingTransaction: (transaction: Transaction | null) => void;
     extractedData: Partial<Transaction> | null;
@@ -166,6 +168,8 @@ export const AppDataContext = createContext<AppDataContextProps>({
     setAddTransactionOpen: () => {},
     isScanReceiptOpen: false,
     setScanReceiptOpen: () => {},
+    isGenerateReceiptOpen: false,
+    setGenerateReceiptOpen: () => {},
     editingTransaction: null,
     setEditingTransaction: () => {},
     extractedData: null,
@@ -184,6 +188,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     
     const [isAddTransactionOpen, setAddTransactionOpen] = useState(false);
     const [isScanReceiptOpen, setScanReceiptOpen] = useState(false);
+    const [isGenerateReceiptOpen, setGenerateReceiptOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [extractedData, setExtractedData] = useState<Partial<Transaction> | null>(null);
 
@@ -198,8 +203,8 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const shouldFetchTransactions = isPage(pagesNeedingTransactions) || isAddTransactionOpen || isScanReceiptOpen;
-    const shouldFetchTenants = isPage(pagesNeedingTenants) || isAddTransactionOpen;
-    const shouldFetchProperties = isPage(pagesNeedingProperties) || isAddTransactionOpen;
+    const shouldFetchTenants = isPage(pagesNeedingTenants) || isAddTransactionOpen || isGenerateReceiptOpen;
+    const shouldFetchProperties = isPage(pagesNeedingProperties) || isAddTransactionOpen || isGenerateReceiptOpen;
 
     // Only set up queries if a user is authenticated
     const tenantsQuery = useMemoFirebase(() => {
@@ -221,12 +226,15 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const { data: properties, isLoading: propertiesLoading, error: propertiesError } = useCollection<Property>(propertiesQuery);
     const { data: transactions, isLoading: transactionsLoading, error: transactionsError } = useCollection<Transaction>(transactionsQuery);
     
-    const addTenant = async (tenantData: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt'>) => {
+    const addTenant = async (tenantData: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt' | 'propertyAddress'> & { propertyId?: string }) => {
         const newId = doc(collection(firestore, 'tenants')).id;
         const now = new Date().toISOString();
+        const property = properties.find(p => p.id === tenantData.propertyId);
+        
         const newTenant: Tenant = {
             id: newId,
             ...tenantData,
+            propertyAddress: property?.address || '',
             paymentStatus: 'due',
             createdAt: now,
             updatedAt: now,
@@ -272,7 +280,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         const colRef = collection(firestore, 'transactions').withConverter(transactionConverter);
         
         const dataToSave = { ...transactionData };
-        if (!dataToSave.receipt) {
+        if (dataToSave.receipt === undefined) {
             delete dataToSave.receipt;
         }
 
@@ -321,6 +329,8 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         setAddTransactionOpen,
         isScanReceiptOpen,
         setScanReceiptOpen,
+        isGenerateReceiptOpen,
+        setGenerateReceiptOpen,
         editingTransaction,
         setEditingTransaction,
         extractedData,
