@@ -138,6 +138,10 @@
           "description": "Actual payment date.",
           "format": "date-time"
         },
+        "lastPaymentMonth": {
+          "type": "string",
+          "description": "The month for which the last payment was made (e.g., 'August')."
+        },
         "notes": {
           "type": "string",
           "description": "Free text or remarks."

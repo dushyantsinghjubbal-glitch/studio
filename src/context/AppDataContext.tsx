@@ -5,6 +5,7 @@ import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebas
 import { collection, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { usePathname } from 'next/navigation';
+import { add, format } from 'date-fns';
 
 export type Property = {
     id: string;
@@ -191,6 +192,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const [isGenerateReceiptOpen, setGenerateReceiptOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [extractedData, setExtractedData] = useState<Partial<Transaction> | null>(null);
+    const [processedTenants, setProcessedTenants] = useState<Tenant[]>([]);
 
     const isPage = (patterns: string[]) => {
         return patterns.some(p => {
@@ -206,7 +208,6 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const shouldFetchTenants = isPage(pagesNeedingTenants) || isAddTransactionOpen || isGenerateReceiptOpen;
     const shouldFetchProperties = isPage(pagesNeedingProperties) || isAddTransactionOpen || isGenerateReceiptOpen;
 
-    // Only set up queries if a user is authenticated
     const tenantsQuery = useMemoFirebase(() => {
         if (!user || !shouldFetchTenants) return null;
         return collection(firestore, 'tenants').withConverter(tenantConverter);
@@ -226,6 +227,29 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const { data: properties, isLoading: propertiesLoading, error: propertiesError } = useCollection<Property>(propertiesQuery);
     const { data: transactions, isLoading: transactionsLoading, error: transactionsError } = useCollection<Transaction>(transactionsQuery);
     
+    useEffect(() => {
+        if (tenants) {
+            const now = new Date();
+            const currentMonth = format(now, 'MMMM');
+
+            const updatedTenants = tenants.map(tenant => {
+                const newStatus = { ...tenant };
+                const netTerms = tenant.netTerms || 0;
+
+                if (tenant.lastPaymentMonth !== currentMonth) {
+                    const dueDate = add(new Date(now.getFullYear(), now.getMonth(), 1), { days: netTerms });
+                    if (now > dueDate) {
+                        newStatus.paymentStatus = 'overdue';
+                    } else {
+                        newStatus.paymentStatus = 'due';
+                    }
+                }
+                return newStatus;
+            });
+            setProcessedTenants(updatedTenants);
+        }
+    }, [tenants]);
+
     const addTenant = async (tenantData: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt' | 'propertyAddress'> & { propertyId?: string }) => {
         const newId = doc(collection(firestore, 'tenants')).id;
         const now = new Date().toISOString();
@@ -277,14 +301,28 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const addTransaction = async (transactionData: Omit<Transaction, 'id'> & { receipt?: File }) => {
-        const colRef = collection(firestore, 'transactions').withConverter(transactionConverter);
-        
         const dataToSave = { ...transactionData };
-        if (dataToSave.receipt === undefined) {
+        if ('receipt' in dataToSave && !dataToSave.receipt) {
             delete dataToSave.receipt;
         }
 
+        const colRef = collection(firestore, 'transactions').withConverter(transactionConverter);
         const docRef = await addDocumentNonBlocking(colRef, dataToSave);
+
+        // If it's a rent payment, update the tenant status
+        if (dataToSave.category === 'Rent Received' && dataToSave.tenantId) {
+            const tenant = tenants?.find(t => t.id === dataToSave.tenantId);
+            if (tenant) {
+                const paymentMonth = format(new Date(dataToSave.date), 'MMMM');
+                await updateTenant({ 
+                    ...tenant, 
+                    paymentStatus: 'paid', 
+                    lastPaymentDate: dataToSave.date,
+                    lastPaymentMonth: paymentMonth,
+                });
+            }
+        }
+
         // TODO: Handle receipt file upload if present
         return docRef?.id;
     };
@@ -309,9 +347,8 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         return false;
     }
 
-
     const value = {
-        tenants: tenants ?? [],
+        tenants: processedTenants,
         addTenant,
         updateTenant,
         removeTenant,

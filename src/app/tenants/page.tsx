@@ -227,8 +227,8 @@ const TenantsContent = () => {
         }}>
             <DialogContent 
                 className="sm:max-w-2xl"
-                onInteractOutside={(e) => e.preventDefault()}
-                onEscapeKeyDown={(e) => e.preventDefault()}
+                onInteractOutside={(e) => isTenantFormOpen && e.preventDefault()}
+                onEscapeKeyDown={(e) => isTenantFormOpen && e.preventDefault()}
             >
                 <DialogHeader>
                     <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</DialogTitle>
@@ -336,7 +336,7 @@ const TenantsContent = () => {
 
                     <DialogFooter className="border-t pt-4 mt-4">
                         <DialogClose asChild>
-                            <Button type="button" variant="outline" onClick={() => setIsTenantFormOpen(false)}>Cancel</Button>
+                            <Button type="button" variant="outline">Cancel</Button>
                         </DialogClose>
                         <Button type="submit">{editingTenant ? 'Save Changes' : 'Add Tenant'}</Button>
                     </DialogFooter>
