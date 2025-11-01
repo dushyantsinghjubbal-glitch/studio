@@ -57,7 +57,7 @@ type ReceiptFormValues = z.infer<typeof receiptSchema>;
 
 function GlobalDialogs() {
     const { 
-        properties, tenants, transactions, addTransaction, updateTransaction,
+        properties, tenants, transactions, addTransaction, updateTransaction, triggerReceiptGeneration,
         isAddTransactionOpen, setAddTransactionOpen, 
         isScanReceiptOpen, setScanReceiptOpen, 
         isGenerateReceiptOpen, setGenerateReceiptOpen,
@@ -184,18 +184,20 @@ function GlobalDialogs() {
     };
 
     const saveTransaction = async (data: TransactionFormValues) => {
+        const dataToSave = {
+          ...data,
+          date: data.date.toISOString(),
+          receipt: data.receipt instanceof File ? data.receipt : undefined,
+        };
+
         if (editingTransaction) {
             await updateTransaction({
                 ...editingTransaction,
-                ...data,
-                date: data.date.toISOString(),
+                ...dataToSave,
             });
             toast({ title: 'Transaction Updated', description: 'Your transaction has been updated.' });
         } else {
-            await addTransaction({
-                ...data,
-                date: data.date.toISOString(),
-            });
+            await addTransaction(dataToSave);
             toast({ title: 'Transaction Saved', description: 'Your transaction has been recorded.' });
         }
         setAddTransactionOpen(false);
@@ -217,12 +219,15 @@ function GlobalDialogs() {
         setStagedTransaction(null);
     }
 
-    const generatePdfReceipt = (data: ReceiptFormValues) => {
+    const generatePdfReceipt = async (data: ReceiptFormValues) => {
         const tenant = tenants.find(t => t.id === data.tenantId);
         if (!tenant) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected tenant.' });
             return;
         }
+
+        // Trigger the payment cycle start
+        await triggerReceiptGeneration(tenant.id, data.month, data.paymentDate);
 
         const doc = new jsPDF();
         
@@ -237,7 +242,7 @@ function GlobalDialogs() {
         // Information
         doc.setFontSize(12);
         doc.text(`Receipt #: ${new Date().getTime()}`, 20, 50);
-        doc.text(`Payment Date: ${format(data.paymentDate, 'PPP')}`, 190, 50, { align: 'right' });
+        doc.text(`Generated On: ${format(new Date(), 'PPP')}`, 190, 50, { align: 'right' });
 
         // Line separator
         doc.setLineWidth(0.5);
@@ -275,19 +280,13 @@ function GlobalDialogs() {
         let finalY = (doc as any).lastAutoTable.finalY;
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.text("Total Paid:", 140, finalY + 10);
+        doc.text("Total Due:", 140, finalY + 10);
         doc.text(`₹${tenant.rentAmount.toLocaleString()}`, 190, finalY + 10, { align: 'right' });
         
-        // Paid Stamp
-        doc.setFontSize(60);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(142, 76, 36); // Accent color
-        doc.text("PAID", 105, 160, { align: 'center', angle: -25 });
-
         // Footer
         doc.setFontSize(10);
         doc.setTextColor(150);
-        doc.text("Thank you for your payment!", 105, 280, { align: 'center' });
+        doc.text("Thank you for your business!", 105, 280, { align: 'center' });
 
         doc.save(`Receipt-${tenant.name.replace(' ', '_')}-${data.month}.pdf`);
 
@@ -299,10 +298,10 @@ function GlobalDialogs() {
     return (
         <>
             {/* AI Receipt Scanner Dialog */}
-            <Dialog open={isScanReceiptOpen} onOpenChange={setScanReceiptOpen}>
+            <Dialog open={isScanReceiptOpen} onOpenChange={(open) => { if (!isProcessing) setScanReceiptOpen(open); }}>
                 <DialogContent 
-                    onInteractOutside={(e) => isProcessing && e.preventDefault()}
-                    onEscapeKeyDown={(e) => isProcessing && e.preventDefault()}
+                    onInteractOutside={(e) => { if (isProcessing) e.preventDefault(); }}
+                    onEscapeKeyDown={(e) => { if (isProcessing) e.preventDefault(); }}
                 >
                     <DialogHeader>
                         <DialogTitle>Scan Receipt with AI</DialogTitle>
@@ -494,7 +493,7 @@ function GlobalDialogs() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label>Payment Date</Label>
+                                <Label>Receipt Date</Label>
                                 <Controller name="paymentDate" control={receiptForm.control} render={({ field }) => (
                                     <Popover>
                                         <PopoverTrigger asChild>

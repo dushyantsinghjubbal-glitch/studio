@@ -5,7 +5,7 @@ import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebas
 import { collection, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { usePathname } from 'next/navigation';
-import { add, format } from 'date-fns';
+import { add, format, isAfter } from 'date-fns';
 
 export type Property = {
     id: string;
@@ -31,11 +31,12 @@ export type Tenant = {
     phone?: string;
     email?: string;
     propertyName: string;
-    propertyAddress: string;
+    propertyAddress?: string;
     rentAmount: number;
     netTerms?: number;
     paymentMethod: 'cash' | 'bank' | 'upi' | 'other';
     lastPaymentMonth?: string;
+    lastReceiptGenerationDate?: string;
     paymentStatus: 'due' | 'paid' | 'partial' | 'overdue';
     lastReceiptUrl?: string;
     lastPaymentDate?: string;
@@ -67,6 +68,9 @@ const propertyConverter = {
             createdAt: 'createdAt' in property ? property.createdAt : new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
+        if ('availabilityDate' in data) delete data.availabilityDate;
+        if ('rentDueDate' in data) delete data.rentDueDate;
+        if ('depositAmount' in data) delete data.depositAmount;
         return data;
     },
     fromFirestore: (snapshot: any, options: any): Property => {
@@ -83,6 +87,7 @@ const propertyConverter = {
 const tenantConverter = {
     toFirestore: (tenant: Omit<Tenant, 'id'> | Tenant) => {
         const data: any = { ...tenant };
+         if ('dueDate' in data) delete data.dueDate;
         return {
             ...data,
             netTerms: tenant.netTerms || 0,
@@ -125,7 +130,7 @@ const transactionConverter = {
 
 interface AppDataContextProps {
     tenants: Tenant[];
-    addTenant: (tenant: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt' | 'propertyAddress'> & { propertyId?: string }) => Promise<void>;
+    addTenant: (tenant: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt' > & { propertyId?: string }) => Promise<void>;
     updateTenant: (tenant: Tenant) => Promise<void>;
     removeTenant: (tenantId: string) => Promise<void>;
     properties: Property[];
@@ -136,6 +141,7 @@ interface AppDataContextProps {
     addTransaction: (transaction: Omit<Transaction, 'id'> & { receipt?: File }) => Promise<string | undefined>;
     updateTransaction: (transaction: Transaction & { receipt?: File }) => Promise<void>;
     removeTransaction: (transactionId: string) => Promise<void>;
+    triggerReceiptGeneration: (tenantId: string, month: string, paymentDate: Date) => Promise<void>;
     loading: boolean;
     error: any;
     isAddTransactionOpen: boolean;
@@ -163,6 +169,7 @@ export const AppDataContext = createContext<AppDataContextProps>({
     addTransaction: async () => { return undefined; },
     updateTransaction: async () => {},
     removeTransaction: async () => {},
+    triggerReceiptGeneration: async () => {},
     loading: true,
     error: null,
     isAddTransactionOpen: false,
@@ -230,27 +237,20 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         if (tenants) {
             const now = new Date();
-            const currentMonth = format(now, 'MMMM');
-
             const updatedTenants = tenants.map(tenant => {
-                const newStatus = { ...tenant };
-                const netTerms = tenant.netTerms || 0;
-
-                if (tenant.lastPaymentMonth !== currentMonth) {
-                    const dueDate = add(new Date(now.getFullYear(), now.getMonth(), 1), { days: netTerms });
-                    if (now > dueDate) {
-                        newStatus.paymentStatus = 'overdue';
-                    } else {
-                        newStatus.paymentStatus = 'due';
+                if (tenant.paymentStatus === 'due' && tenant.lastReceiptGenerationDate) {
+                    const dueDate = add(new Date(tenant.lastReceiptGenerationDate), { days: tenant.netTerms || 0 });
+                    if (isAfter(now, dueDate)) {
+                        return { ...tenant, paymentStatus: 'overdue' };
                     }
                 }
-                return newStatus;
+                return tenant;
             });
             setProcessedTenants(updatedTenants);
         }
     }, [tenants]);
 
-    const addTenant = async (tenantData: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt' | 'propertyAddress'> & { propertyId?: string }) => {
+    const addTenant = async (tenantData: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt' > & { propertyId?: string }) => {
         const newId = doc(collection(firestore, 'tenants')).id;
         const now = new Date().toISOString();
         const property = properties.find(p => p.id === tenantData.propertyId);
@@ -258,8 +258,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         const newTenant: Tenant = {
             id: newId,
             ...tenantData,
-            propertyAddress: property?.address || '',
-            paymentStatus: 'due',
+            paymentStatus: 'paid', // New tenants start as paid up
             createdAt: now,
             updatedAt: now,
         };
@@ -276,6 +275,19 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         const tenantRef = doc(firestore, 'tenants', tenantId);
         deleteDocumentNonBlocking(tenantRef);
     };
+    
+    const triggerReceiptGeneration = async (tenantId: string, month: string, paymentDate: Date) => {
+        const tenant = tenants?.find(t => t.id === tenantId);
+        if (tenant) {
+            await updateTenant({
+                ...tenant,
+                paymentStatus: 'due',
+                lastPaymentMonth: month,
+                lastReceiptGenerationDate: paymentDate.toISOString(),
+            });
+        }
+    };
+
 
     const addProperty = async (propertyData: Omit<Property, 'id' | 'createdAt' | 'updatedAt'>) => {
         const newId = doc(collection(firestore, 'properties')).id;
@@ -301,7 +313,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const addTransaction = async (transactionData: Omit<Transaction, 'id'> & { receipt?: File }) => {
-        const dataToSave = { ...transactionData };
+        const dataToSave: Partial<typeof transactionData> = { ...transactionData };
         if ('receipt' in dataToSave && !dataToSave.receipt) {
             delete dataToSave.receipt;
         }
@@ -313,7 +325,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         if (dataToSave.category === 'Rent Received' && dataToSave.tenantId) {
             const tenant = tenants?.find(t => t.id === dataToSave.tenantId);
             if (tenant) {
-                const paymentMonth = format(new Date(dataToSave.date), 'MMMM');
+                const paymentMonth = format(new Date(dataToSave.date as string), 'MMMM');
                 await updateTenant({ 
                     ...tenant, 
                     paymentStatus: 'paid', 
@@ -334,6 +346,8 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         // TODO: Handle receipt file upload if present
     };
 
+
+
     const removeTransaction = async (transactionId: string) => {
         const docRef = doc(firestore, 'transactions', transactionId);
         deleteDocumentNonBlocking(docRef);
@@ -352,6 +366,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         addTenant,
         updateTenant,
         removeTenant,
+        triggerReceiptGeneration,
         properties: properties ?? [],
         addProperty,
         updateProperty,

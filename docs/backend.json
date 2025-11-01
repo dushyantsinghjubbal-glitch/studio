@@ -101,6 +101,10 @@
           "type": "string",
           "description": "Shop, flat, or house name/number."
         },
+        "propertyAddress": {
+          "type": "string",
+          "description": "The full address of the property they are renting."
+        },
         "rentAmount": {
           "type": "number",
           "description": "Monthly rent amount."
@@ -141,6 +145,11 @@
         "lastPaymentMonth": {
           "type": "string",
           "description": "The month for which the last payment was made (e.g., 'August')."
+        },
+        "lastReceiptGenerationDate": {
+          "type": "string",
+          "description": "The date when the receipt for the current due month was generated.",
+          "format": "date-time"
         },
         "notes": {
           "type": "string",
