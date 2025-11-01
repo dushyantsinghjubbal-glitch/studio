@@ -3,7 +3,7 @@
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import Link from 'next/link';
-import { Home, Users, Building, LogOut, Wallet, Plus, Receipt, FileText, User as UserIcon, Cog, Sun, Moon, Book } from 'lucide-react';
+import { Home, Users, Building, LogOut, Wallet, Plus, Receipt, FileText, User as UserIcon, Cog, Sun, Moon, Book, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppDataContext, AppDataProvider, Tenant, Transaction } from '@/context/AppDataContext';
 import { FirebaseClientProvider, useUser, useAuth } from '@/firebase';
@@ -29,7 +29,8 @@ import { recognizeTransaction, RecognizeTransactionInput } from '@/ai/flows/reco
 import { Textarea } from '@/components/ui/textarea';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 
 const transactionSchema = z.object({
@@ -337,7 +338,8 @@ function GlobalDialogs() {
         <>
             {/* AI Receipt Scanner Dialog */}
             <Dialog open={isScanReceiptOpen} onOpenChange={(open) => { if (!open) setScanReceiptOpen(open); }}>
-                <DialogContent 
+                <DialogContent
+                    className="sm:max-w-md bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-2xl shadow-lg border-white/20"
                     onInteractOutside={(e) => { if (isProcessing || isScanReceiptOpen) e.preventDefault(); }}
                     onEscapeKeyDown={(e) => { if (isProcessing || isScanReceiptOpen) e.preventDefault(); }}
                 >
@@ -370,7 +372,7 @@ function GlobalDialogs() {
             
             {/* Duplicate Transaction Alert */}
             <AlertDialog open={isDuplicateAlertOpen} onOpenChange={setDuplicateAlertOpen}>
-                <AlertDialogContent>
+                <AlertDialogContent className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-2xl shadow-lg border-white/20">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Possible Duplicate Transaction</AlertDialogTitle>
                         <AlertDialogDescription>
@@ -394,7 +396,8 @@ function GlobalDialogs() {
                     setAddTransactionOpen(true);
                  }
              }}>
-                <DialogContent className="sm:max-w-md" 
+                <DialogContent
+                 className="sm:max-w-md bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-2xl shadow-lg border-white/20"
                  onInteractOutside={(e) => { if (isAddTransactionOpen) e.preventDefault()}}
                  onEscapeKeyDown={(e) => { if (isAddTransactionOpen) e.preventDefault()}}>
                     <DialogHeader>
@@ -507,7 +510,9 @@ function GlobalDialogs() {
                     setGenerateReceiptOpen(true);
                  }
             }}>
-                <DialogContent className="sm:max-w-md" onInteractOutside={(e) => { if (isGenerateReceiptOpen) e.preventDefault()}} onEscapeKeyDown={(e) => { if (isGenerateReceiptOpen) e.preventDefault()}}>
+                <DialogContent
+                 className="sm:max-w-md bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-2xl shadow-lg border-white/20"
+                 onInteractOutside={(e) => { if (isGenerateReceiptOpen) e.preventDefault()}} onEscapeKeyDown={(e) => { if (isGenerateReceiptOpen) e.preventDefault()}}>
                     <DialogHeader>
                         <DialogTitle>Generate Rent Receipt</DialogTitle>
                         <DialogDescription>Select a tenant and payment details to generate a PDF receipt.</DialogDescription>
@@ -761,12 +766,221 @@ function SidebarNav() {
     )
 }
 
+function MobileHeader({ onMenuClick }: { onMenuClick: () => void }) {
+    return (
+        <header className="md:hidden sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-lg px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+            <Button size="icon" variant="outline" className="sm:hidden" onClick={onMenuClick}>
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle Menu</span>
+            </Button>
+            <div className="flex items-center gap-2">
+                <div className="bg-gradient-to-r from-blue-400 to-purple-500 p-2 rounded-lg text-white font-bold text-base">
+                    FP
+                </div>
+                <span className="font-semibold text-gray-700 dark:text-gray-200">
+                    FinProp
+                </span>
+            </div>
+        </header>
+    );
+}
+
+const variants = {
+    open: {
+        x: 0,
+        transition: {
+            type: "spring",
+            stiffness: 300,
+            damping: 30
+        }
+    },
+    closed: {
+        x: "-100%",
+        transition: {
+            type: "spring",
+            stiffness: 300,
+            damping: 30
+        }
+    }
+};
+
+const itemVariants = {
+    open: {
+        opacity: 1,
+        y: 0,
+        transition: { type: "spring", stiffness: 300, damping: 24 }
+    },
+    closed: { opacity: 0, y: 20, transition: { duration: 0.2 } }
+};
+
+
+function MobileSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (open: boolean) => void }) {
+    const { user } = useUser();
+    const auth = useAuth();
+    const router = useRouter();
+    const [darkMode, setDarkMode] = useState(false);
+
+    useEffect(() => {
+        const isDark = document.documentElement.classList.contains('dark');
+        setDarkMode(isDark);
+    }, []);
+
+    const toggleDarkMode = () => {
+        if (darkMode) {
+            document.documentElement.classList.remove("dark");
+        } else {
+            document.documentElement.classList.add("dark");
+        }
+        setDarkMode(!darkMode);
+    };
+
+    const handleSignOut = async () => {
+        if (auth) {
+            await signOut(auth);
+            router.push('/login');
+        }
+    };
+    
+     const getInitials = (name?: string | null, email?: string | null) => {
+        if (name) {
+            const nameParts = name.split(' ');
+            if (nameParts.length > 1) {
+                return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+        if (email) {
+            return email.substring(0, 2).toUpperCase();
+        }
+        return 'U';
+    };
+
+    const menuItems = [
+      { name: "Dashboard", icon: Home, href: "/" },
+      { name: "Ledger", icon: Book, href: "/ledger" },
+      { name: "Tenants", icon: Users, href: "/tenants" },
+      { name: "Properties", icon: Building, href: "/properties" },
+    ];
+    
+     const handleLinkClick = (href: string) => {
+        router.push(href);
+        setIsOpen(false);
+    };
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 z-40"
+                        onClick={() => setIsOpen(false)}
+                    />
+                    <motion.aside
+                        variants={variants}
+                        initial="closed"
+                        animate="open"
+                        exit="closed"
+                        className="fixed left-0 top-0 h-screen w-64 bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg flex flex-col py-6 px-4 rounded-r-3xl z-50"
+                    >
+                         <motion.div
+                            className="mb-8 flex items-center gap-2"
+                            variants={itemVariants}
+                        >
+                            <div className="bg-gradient-to-r from-blue-400 to-purple-500 p-3 rounded-2xl shadow-md text-white font-bold text-lg">
+                                FP
+                            </div>
+                            <span className="font-semibold text-gray-700 dark:text-gray-200">
+                                FinProp
+                            </span>
+                        </motion.div>
+                        
+                        <motion.nav
+                            initial="closed"
+                            animate="open"
+                            variants={{ open: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } } }}
+                            className="flex flex-col gap-4 w-full flex-1"
+                        >
+                            {menuItems.map((item) => (
+                                <motion.div key={item.name} variants={itemVariants}>
+                                    <button
+                                        onClick={() => handleLinkClick(item.href)}
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all"
+                                    >
+                                        <item.icon className="text-blue-500 bg-blue-100 dark:text-blue-300 dark:bg-gray-800 p-2 rounded-xl" size={28} />
+                                        <span className="font-medium">{item.name}</span>
+                                    </button>
+                                </motion.div>
+                            ))}
+                        </motion.nav>
+                         <motion.div
+                            initial="closed"
+                            animate="open"
+                            variants={{ open: { transition: { staggerChildren: 0.07, delayChildren: 0.4 } } }}
+                            className="flex flex-col gap-2 w-full"
+                        >
+                            <motion.button variants={itemVariants}
+                              onClick={toggleDarkMode}
+                              className="flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all"
+                              title="Toggle dark mode"
+                            >
+                                {darkMode ? (
+                                    <Sun className="text-yellow-400 bg-gray-800 p-2 rounded-xl" size={28} />
+                                ) : (
+                                    <Moon className="text-indigo-500 bg-blue-100 p-2 rounded-xl" size={28} />
+                                )}
+                                 <span className="font-medium">
+                                    Toggle Theme
+                                </span>
+                            </motion.button>
+                             {user && !user.isAnonymous && (
+                                 <motion.div variants={itemVariants}>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                             <div
+                                                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all"
+                                              >
+                                                <Avatar className="h-10 w-10 border-2 border-primary">
+                                                    <AvatarImage src={`https://api.dicebear.com/8.x/adventurer/svg?seed=${user.uid}`} alt={user.displayName || user.email || 'User'} />
+                                                    <AvatarFallback>{getInitials(user.displayName, user.email)}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex flex-col text-left">
+                                                     <span className="font-medium text-sm truncate max-w-28">{user.displayName || user.email}</span>
+                                                     <span className="text-xs text-muted-foreground">View Profile</span>
+                                                </div>
+                                              </div>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent className="w-56 mb-2 ml-2" align="start" side="right" forceMount>
+                                             <DropdownMenuItem onClick={() => { handleLinkClick('/profile'); }}>
+                                                <Cog className="mr-2 h-4 w-4" />
+                                                <span>Profile Settings</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={handleSignOut}>
+                                                <LogOut className="mr-2 h-4 w-4" />
+                                                <span>Log out</span>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </motion.div>
+                            )}
+                        </motion.div>
+                    </motion.aside>
+                </>
+            )}
+        </AnimatePresence>
+    );
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -780,10 +994,16 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <AppDataProvider>
             <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-950 dark:to-black text-gray-800 dark:text-gray-100 transition-colors duration-500 font-sans">
-                <SidebarNav />
-                <main className="flex-1 p-6 md:p-10 overflow-y-auto relative ml-20 md:ml-60">
-                    {children}
-                </main>
+                <div className="hidden md:block">
+                  <SidebarNav />
+                </div>
+                 <MobileSidebar isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
+                <div className="flex flex-col flex-1">
+                    <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
+                    <main className="flex-1 p-6 md:p-10 overflow-y-auto relative">
+                        {children}
+                    </main>
+                </div>
                 <FloatingActionButton />
             </div>
             <GlobalDialogs />

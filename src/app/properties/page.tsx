@@ -148,7 +148,7 @@ const PropertiesContent = () => {
         </div>
         
         {loading ? (<p>Loading properties...</p>) : filteredProperties.length === 0 ? (
-            <div className="text-center py-12 bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-3xl shadow-lg">
+            <div className="text-center py-12 bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-2xl shadow-sm">
                 <Building className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-semibold">No properties found</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{searchTerm ? 'Try adjusting your search.' : 'Get started by adding your first property.'}</p>
@@ -160,7 +160,7 @@ const PropertiesContent = () => {
          ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredProperties.map((property) => (
-                    <motion.div whileHover={{ scale: 1.03 }} key={property.id} className="rounded-3xl bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg border border-white/20 flex flex-col">
+                    <motion.div whileHover={{ scale: 1.03 }} key={property.id} className="rounded-2xl bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-sm border border-white/20 flex flex-col">
                         <CardHeader className="flex-row gap-4 items-center">
                             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800">
                                 {getPropertyIcon(property.type)}
@@ -192,7 +192,7 @@ const PropertiesContent = () => {
                                                 <span>Remove</span>
                                             </DropdownMenuItem>
                                         </AlertDialogTrigger>
-                                        <AlertDialogContent>
+                                        <AlertDialogContent className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-2xl shadow-lg border-white/20">
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                 <AlertDialogDescription>
@@ -235,7 +235,7 @@ const PropertiesContent = () => {
             }
         }}>
             <DialogContent 
-                className="sm:max-w-3xl"
+                className="sm:max-w-3xl bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-2xl shadow-lg border-white/20"
                 onInteractOutside={(e) => e.preventDefault()}
                 onEscapeKeyDown={(e) => e.preventDefault()}
             >

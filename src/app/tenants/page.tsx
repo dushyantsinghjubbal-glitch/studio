@@ -129,7 +129,7 @@ const TenantsContent = () => {
         </div>
 
         {loading ? (<p>Loading tenants...</p>) : tenants.length === 0 ? (
-            <div className="text-center py-12 bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-3xl shadow-lg">
+            <div className="text-center py-12 bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-2xl shadow-sm">
                 <UserPlus className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-semibold">No tenants found</h3>
                 <p className="mt-1 text-sm text-muted-foreground">Get started by adding your first tenant.</p>
@@ -141,7 +141,7 @@ const TenantsContent = () => {
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {tenants.map((tenant) => (
-                    <motion.div whileHover={{ scale: 1.03 }} key={tenant.id} className="rounded-3xl bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg border border-white/20 flex flex-col">
+                    <motion.div whileHover={{ scale: 1.03 }} key={tenant.id} className="rounded-2xl bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-sm border border-white/20 flex flex-col">
                         <CardHeader className="flex-row gap-4 items-start">
                             <Avatar className="h-12 w-12 border-2 border-white">
                                 <AvatarImage src={`https://i.pravatar.cc/150?u=${tenant.id}`} />
@@ -169,7 +169,7 @@ const TenantsContent = () => {
                                                 <span>Remove</span>
                                             </DropdownMenuItem>
                                         </AlertDialogTrigger>
-                                        <AlertDialogContent>
+                                        <AlertDialogContent className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-2xl shadow-lg border-white/20">
                                             <AlertDialogHeader>
                                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                             <AlertDialogDescription>
@@ -221,7 +221,7 @@ const TenantsContent = () => {
             }
         }}>
             <DialogContent 
-                className="sm:max-w-2xl"
+                className="sm:max-w-2xl bg-white/80 dark:bg-gray-900/70 backdrop-blur-md rounded-2xl shadow-lg border-white/20"
                 onInteractOutside={(e) => isTenantFormOpen && e.preventDefault()}
                 onEscapeKeyDown={(e) => isTenantFormOpen && e.preventDefault()}
             >
