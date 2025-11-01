@@ -993,12 +993,13 @@ export default function RootLayout({
       <body className="font-body antialiased" style={{ fontFamily: "'Poppins', sans-serif" }}>
         <FirebaseClientProvider>
           <AppDataProvider>
-            <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-950 dark:to-black text-gray-800 dark:text-gray-100 transition-colors duration-500 font-sans">
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-950 dark:to-black text-gray-800 dark:text-gray-100 transition-colors duration-500 font-sans">
                 <div className="hidden md:block">
                   <SidebarNav />
                 </div>
-                 <MobileSidebar isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
-                <div className="flex flex-col flex-1">
+                <MobileSidebar isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
+                
+                <div className="flex flex-col flex-1 md:ml-60">
                     <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
                     <main className="flex-1 p-6 md:p-10 overflow-y-auto relative">
                         {children}
