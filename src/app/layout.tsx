@@ -301,8 +301,8 @@ function GlobalDialogs() {
             {/* AI Receipt Scanner Dialog */}
             <Dialog open={isScanReceiptOpen} onOpenChange={(open) => { if (!isProcessing) setScanReceiptOpen(open); }}>
                 <DialogContent 
-                    onInteractOutside={(e) => { if (isProcessing || isScanReceiptOpen) e.preventDefault(); }}
-                    onEscapeKeyDown={(e) => { if (isProcessing || isScanReceiptOpen) e.preventDefault(); }}
+                    onInteractOutside={(e) => { if (isProcessing) e.preventDefault(); }}
+                    onEscapeKeyDown={(e) => { if (isProcessing) e.preventDefault(); }}
                 >
                     <DialogHeader>
                         <DialogTitle>Scan Receipt with AI</DialogTitle>
@@ -358,8 +358,8 @@ function GlobalDialogs() {
                  }
              }}>
                 <DialogContent className="sm:max-w-md" 
-                 onInteractOutside={(e) => {if(isAddTransactionOpen) e.preventDefault()}}
-                 onEscapeKeyDown={(e) => {if(isAddTransactionOpen) e.preventDefault()}}>
+                 onInteractOutside={(e) => { e.preventDefault()}}
+                 onEscapeKeyDown={(e) => { e.preventDefault()}}>
                     <DialogHeader>
                         <DialogTitle>{editingTransaction ? 'Edit Transaction' : (extractedData ? 'Confirm Transaction' : 'Add Transaction')}</DialogTitle>
                         <DialogDescription>
@@ -470,7 +470,7 @@ function GlobalDialogs() {
                     setGenerateReceiptOpen(true);
                  }
             }}>
-                <DialogContent className="sm:max-w-md" onInteractOutside={(e) => {if(isGenerateReceiptOpen) e.preventDefault()}} onEscapeKeyDown={(e) => {if(isGenerateReceiptOpen) e.preventDefault()}}>
+                <DialogContent className="sm:max-w-md" onInteractOutside={(e) => { e.preventDefault()}} onEscapeKeyDown={(e) => { e.preventDefault()}}>
                     <DialogHeader>
                         <DialogTitle>Generate Rent Receipt</DialogTitle>
                         <DialogDescription>Select a tenant and payment details to generate a PDF receipt.</DialogDescription>
