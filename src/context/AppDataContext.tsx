@@ -35,7 +35,6 @@ export type Tenant = {
     propertyName: string;
     propertyAddress: string;
     rentAmount: number;
-    depositAmount?: number;
     dueDate: Date;
     netTerms?: number;
     paymentMethod: 'cash' | 'bank' | 'upi' | 'other';
@@ -90,8 +89,10 @@ const propertyConverter = {
 
 const tenantConverter = {
     toFirestore: (tenant: Omit<Tenant, 'id'> | Tenant) => {
+        const data: any = { ...tenant };
+        delete (data as Partial<Tenant>).depositAmount; // no longer in use
         return {
-            ...tenant,
+            ...data,
             dueDate: tenant.dueDate,
             netTerms: tenant.netTerms || 0,
             createdAt: 'createdAt' in tenant ? tenant.createdAt : new Date().toISOString(),
@@ -118,7 +119,9 @@ const transactionConverter = {
         data.tenantId = transaction.tenantId || null;
         data.merchant = transaction.merchant || null;
         // Don't store the File object in Firestore
-        delete data.receipt; 
+        if ('receipt' in data) {
+            delete data.receipt;
+        }
         return data;
     },
     fromFirestore: (snapshot: any, options: any): Transaction => {

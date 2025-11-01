@@ -32,8 +32,6 @@ const tenantSchema = z.object({
     email: z.string().email('Invalid email address').optional().or(z.literal('')),
     propertyId: z.string().optional(),
     propertyName: z.string().min(1, 'Property name is required'),
-    propertyAddress: z.string().min(1, 'Property address is required'),
-    depositAmount: z.coerce.number().optional(),
     netTerms: z.coerce.number().optional(),
     paymentMethod: z.enum(['cash', 'bank', 'upi', 'other']),
     notes: z.string().optional(),
@@ -70,11 +68,7 @@ const TenantsContent = () => {
         const selectedProperty = properties.find(p => p.id === selectedPropertyId);
         if (selectedProperty) {
             tenantForm.setValue('propertyName', selectedProperty.name);
-            tenantForm.setValue('propertyAddress', selectedProperty.address);
             tenantForm.setValue('rentAmount', selectedProperty.rentAmount);
-            if (selectedProperty.depositAmount) {
-                tenantForm.setValue('depositAmount', selectedProperty.depositAmount);
-            }
             if (selectedProperty.rentDueDate) {
                 tenantForm.setValue('dueDate', new Date(selectedProperty.rentDueDate));
             }
@@ -93,8 +87,6 @@ const TenantsContent = () => {
             phone: tenant.phone || '',
             email: tenant.email || '',
             propertyName: tenant.propertyName,
-            propertyAddress: tenant.propertyAddress,
-            depositAmount: tenant.depositAmount || 0,
             netTerms: tenant.netTerms || 0,
             paymentMethod: tenant.paymentMethod,
             notes: tenant.notes || '',
@@ -107,8 +99,6 @@ const TenantsContent = () => {
             phone: '',
             email: '',
             propertyName: '',
-            propertyAddress: '',
-            depositAmount: 0,
             netTerms: 0,
             paymentMethod: 'bank',
             notes: '',
@@ -120,10 +110,11 @@ const TenantsContent = () => {
 
   const handleTenantFormSubmit = async (data: TenantFormValues) => {
     if (editingTenant) {
-        await updateTenant({ ...editingTenant, ...data });
+        await updateTenant({ ...editingTenant, ...data, propertyAddress: properties.find(p => p.id === data.propertyId)?.address || editingTenant.propertyAddress });
         toast({ title: "Tenant Updated", description: `${data.name}'s details have been updated.` });
     } else {
-        await addTenant(data);
+        const property = properties.find(p => p.id === data.propertyId);
+        await addTenant({...data, propertyAddress: property?.address || ''});
         toast({ title: "Tenant Added", description: `${data.name} has been added to your tenants list.` });
     }
     setIsTenantFormOpen(false);
@@ -236,10 +227,16 @@ const TenantsContent = () => {
 
         {/* Tenant Add/Edit Dialog */}
         <Dialog open={isTenantFormOpen} onOpenChange={(isOpen) => {
-            setIsTenantFormOpen(isOpen);
-            if (!isOpen) router.replace('/tenants');
+            if (!isOpen) {
+              setIsTenantFormOpen(false);
+              router.replace('/tenants');
+            }
         }}>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent 
+                className="sm:max-w-2xl"
+                onInteractOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>{editingTenant ? 'Edit Tenant' : 'Add New Tenant'}</DialogTitle>
                 </DialogHeader>
@@ -289,18 +286,13 @@ const TenantsContent = () => {
                             {tenantForm.formState.errors.propertyName && <p className="text-red-500 text-xs">{tenantForm.formState.errors.propertyName.message}</p>}
                         </div>
                          <div className="grid gap-2">
-                            <Label htmlFor="propertyAddress">Property Address</Label>
-                            <Input id="propertyAddress" {...tenantForm.register('propertyAddress')} />
-                            {tenantForm.formState.errors.propertyAddress && <p className="text-red-500 text-xs">{tenantForm.formState.errors.propertyAddress.message}</p>}
-                        </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                         <div className="grid gap-2">
                             <Label htmlFor="rentAmount">Rent Amount (₹)</Label>
                             <Input id="rentAmount" type="number" {...tenantForm.register('rentAmount')} />
                             {tenantForm.formState.errors.rentAmount && <p className="text-red-500 text-xs">{tenantForm.formState.errors.rentAmount.message}</p>}
                         </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="grid gap-2">
                            <Label htmlFor="dueDate">Due Date</Label>                            <Controller
                                 control={tenantForm.control}
@@ -331,10 +323,6 @@ const TenantsContent = () => {
                                 )}
                             />
                             {tenantForm.formState.errors.dueDate && <p className="text-red-500 text-xs">{tenantForm.formState.errors.dueDate.message}</p>}
-                        </div>
-                         <div className="grid gap-2">
-                            <Label htmlFor="depositAmount">Deposit (₹)</Label>
-                            <Input id="depositAmount" type="number" {...tenantForm.register('depositAmount')} />
                         </div>
                     </div>
 
@@ -371,9 +359,10 @@ const TenantsContent = () => {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="0">None</SelectItem>
-                                            {[...Array(11)].map((_, i) => (
-                                                <SelectItem key={i+5} value={String(i + 5)}>Net {i + 5}</SelectItem>
-                                            ))}
+                                            <SelectItem value="5">Net 5</SelectItem>
+                                            <SelectItem value="10">Net 10</SelectItem>
+                                            <SelectItem value="15">Net 15</SelectItem>
+                                            <SelectItem value="20">Net 20</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 )}
@@ -388,7 +377,7 @@ const TenantsContent = () => {
 
                     <DialogFooter className="border-t pt-4 mt-4">
                         <DialogClose asChild>
-                            <Button type="button" variant="outline">Cancel</Button>
+                            <Button type="button" variant="outline" onClick={() => setIsTenantFormOpen(false)}>Cancel</Button>
                         </DialogClose>
                         <Button type="submit">{editingTenant ? 'Save Changes' : 'Add Tenant'}</Button>
                     </DialogFooter>

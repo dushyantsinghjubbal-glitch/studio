@@ -115,17 +115,9 @@ fromat": "date",
           "type": "string",
           "description": "Shop, flat, or house name/number."
         },
-        "propertyAddress": {
-          "type": "string",
-          "description": "Full address of the rented unit."
-        },
         "rentAmount": {
           "type": "number",
           "description": "Monthly rent amount."
-        },
-        "depositAmount": {
-          "type": "number",
-          "description": "Security deposit (optional)."
         },
         "dueDate": {
           "type": "string",
@@ -184,7 +176,6 @@ fromat": "date",
         "id",
         "name",
         "propertyName",
-        "propertyAddress",
         "rentAmount",
         "dueDate",
         "paymentMethod",
