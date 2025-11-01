@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Link from 'next/link';
 import { Home, Book, Users, Building, Sun, Moon } from "lucide-react";
 import {
   PieChart,
@@ -24,6 +25,13 @@ export default function FinPropDashboard() {
     if (darkMode) document.documentElement.classList.add("dark");
     else document.documentElement.classList.remove("dark");
   }, [darkMode]);
+  
+  const menuItems = [
+      { name: "Dashboard", icon: Home, href: "/" },
+      { name: "Ledger", icon: Book, href: "/ledger" },
+      { name: "Tenants", icon: Users, href: "/tenants" },
+      { name: "Properties", icon: Building, href: "/properties" },
+  ];
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-950 dark:to-black text-gray-800 dark:text-gray-100 transition-colors duration-500 font-sans">
@@ -44,25 +52,21 @@ export default function FinPropDashboard() {
         </motion.div>
 
         <nav className="flex flex-col gap-4 w-full">
-          {[
-            { name: "Dashboard", icon: Home },
-            { name: "Ledger", icon: Book },
-            { name: "Tenants", icon: Users },
-            { name: "Properties", icon: Building },
-          ].map((item) => (
-            <motion.div
-              whileHover={{ scale: 1.07 }}
-              key={item.name}
-              className="flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all"
-            >
-              <item.icon
-                className="text-blue-500 bg-blue-100 dark:text-blue-300 dark:bg-gray-800 p-2 rounded-xl"
-                size={28}
-              />
-              <span className="hidden md:block font-medium">
-                {item.name}
-              </span>
-            </motion.div>
+          {menuItems.map((item) => (
+            <Link href={item.href} key={item.name}>
+              <motion.div
+                whileHover={{ scale: 1.07 }}
+                className="flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all"
+              >
+                <item.icon
+                  className="text-blue-500 bg-blue-100 dark:text-blue-300 dark:bg-gray-800 p-2 rounded-xl"
+                  size={28}
+                />
+                <span className="hidden md:block font-medium">
+                  {item.name}
+                </span>
+              </motion.div>
+            </Link>
           ))}
         </nav>
       </aside>
