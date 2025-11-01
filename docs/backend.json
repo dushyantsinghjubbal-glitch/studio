@@ -232,6 +232,18 @@
         }
       },
       "required": ["id", "title", "amount", "type", "category", "date"]
+    },
+    "UserProfile": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "User Profile",
+        "type": "object",
+        "description": "Represents a user's profile information.",
+        "properties": {
+            "businessName": {
+                "type": "string",
+                "description": "The name of the user's business, to be used on receipts."
+            }
+        }
     }
   },
   "auth": {
@@ -258,6 +270,12 @@
             "$ref": "#/entities/Transaction"
         },
         "description": "Stores all financial transactions (income and expenses)."
+    },
+    "/users/{userId}": {
+        "schema": {
+            "$ref": "#/entities/UserProfile"
+        },
+        "description": "Stores user-specific profile information."
     }
   }
 }

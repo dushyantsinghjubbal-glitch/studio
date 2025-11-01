@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, ReactNode, useEffect, useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { usePathname } from 'next/navigation';
@@ -59,6 +59,10 @@ export type Transaction = {
     merchant?: string;
 };
 
+export type UserProfile = {
+    businessName?: string;
+}
+
 
 // Firestore converters
 const propertyConverter = {
@@ -68,9 +72,6 @@ const propertyConverter = {
             createdAt: 'createdAt' in property ? property.createdAt : new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
-        if ('availabilityDate' in data) delete data.availabilityDate;
-        if ('rentDueDate' in data) delete data.rentDueDate;
-        if ('depositAmount' in data) delete data.depositAmount;
         return data;
     },
     fromFirestore: (snapshot: any, options: any): Property => {
@@ -87,7 +88,6 @@ const propertyConverter = {
 const tenantConverter = {
     toFirestore: (tenant: Omit<Tenant, 'id'> | Tenant) => {
         const data: any = { ...tenant };
-         if ('dueDate' in data) delete data.dueDate;
         return {
             ...data,
             netTerms: tenant.netTerms || 0,
@@ -128,7 +128,19 @@ const transactionConverter = {
     }
 };
 
+const userProfileConverter = {
+    toFirestore: (profile: UserProfile) => {
+        return profile;
+    },
+    fromFirestore: (snapshot: any, options: any): UserProfile => {
+        const data = snapshot.data(options);
+        return data as UserProfile;
+    }
+};
+
 interface AppDataContextProps {
+    userProfile: UserProfile | null;
+    updateUserProfile: (profile: UserProfile) => Promise<void>;
     tenants: Tenant[];
     addTenant: (tenant: Omit<Tenant, 'id' | 'paymentStatus' | 'createdAt' | 'updatedAt' > & { propertyId?: string }) => Promise<void>;
     updateTenant: (tenant: Tenant) => Promise<void>;
@@ -157,6 +169,8 @@ interface AppDataContextProps {
 }
 
 export const AppDataContext = createContext<AppDataContextProps>({
+    userProfile: null,
+    updateUserProfile: async () => {},
     tenants: [],
     addTenant: async () => {},
     updateTenant: async () => {},
@@ -187,6 +201,7 @@ export const AppDataContext = createContext<AppDataContextProps>({
 const pagesNeedingTransactions = ['/', '/ledger', '/properties/[propertyId]'];
 const pagesNeedingTenants = ['/', '/tenants', '/properties', '/properties/[propertyId]', '/ledger'];
 const pagesNeedingProperties = ['/', '/tenants', '/properties', '/properties/[propertyId]', '/ledger'];
+const pagesNeedingProfile = ['/profile', '/layout']; // Load profile for receipts
 
 
 export const AppDataProvider = ({ children }: { children: ReactNode }) => {
@@ -202,6 +217,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const [processedTenants, setProcessedTenants] = useState<Tenant[]>([]);
 
     const isPage = (patterns: string[]) => {
+        if (pathname === '/layout') return true; // Special case for global components
         return patterns.some(p => {
             if (p.includes('[') && p.includes(']')) {
                 const base = p.substring(0, p.indexOf('['));
@@ -214,6 +230,8 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
     const shouldFetchTransactions = isPage(pagesNeedingTransactions) || isAddTransactionOpen || isScanReceiptOpen;
     const shouldFetchTenants = isPage(pagesNeedingTenants) || isAddTransactionOpen || isGenerateReceiptOpen;
     const shouldFetchProperties = isPage(pagesNeedingProperties) || isAddTransactionOpen || isGenerateReceiptOpen;
+    const shouldFetchProfile = isPage(pagesNeedingProfile) || isGenerateReceiptOpen;
+
 
     const tenantsQuery = useMemoFirebase(() => {
         if (!user || !shouldFetchTenants) return null;
@@ -229,10 +247,16 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         if (!user || !shouldFetchTransactions) return null;
         return collection(firestore, 'transactions').withConverter(transactionConverter);
     }, [firestore, user, shouldFetchTransactions]);
+    
+    const userProfileRef = useMemoFirebase(() => {
+        if (!user || !shouldFetchProfile) return null;
+        return doc(firestore, 'users', user.uid).withConverter(userProfileConverter);
+    }, [firestore, user, shouldFetchProfile]);
 
     const { data: tenants, isLoading: tenantsLoading, error: tenantsError } = useCollection<Tenant>(tenantsQuery);
     const { data: properties, isLoading: propertiesLoading, error: propertiesError } = useCollection<Property>(propertiesQuery);
     const { data: transactions, isLoading: transactionsLoading, error: transactionsError } = useCollection<Transaction>(transactionsQuery);
+    const { data: userProfile, isLoading: profileLoading, error: profileError } = useDoc<UserProfile>(userProfileRef);
     
     useEffect(() => {
         if (tenants) {
@@ -346,11 +370,15 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         // TODO: Handle receipt file upload if present
     };
 
-
-
     const removeTransaction = async (transactionId: string) => {
         const docRef = doc(firestore, 'transactions', transactionId);
         deleteDocumentNonBlocking(docRef);
+    };
+
+    const updateUserProfile = async (profileData: UserProfile) => {
+        if (!user) return;
+        const profileRef = doc(firestore, 'users', user.uid).withConverter(userProfileConverter);
+        setDocumentNonBlocking(profileRef, profileData, { merge: true });
     };
 
     const getLoadingState = () => {
@@ -358,10 +386,13 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         if (shouldFetchTenants && tenantsLoading) return true;
         if (shouldFetchProperties && propertiesLoading) return true;
         if (shouldFetchTransactions && transactionsLoading) return true;
+        if (shouldFetchProfile && profileLoading) return true;
         return false;
     }
 
     const value = {
+        userProfile,
+        updateUserProfile,
         tenants: processedTenants,
         addTenant,
         updateTenant,
@@ -376,7 +407,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
         updateTransaction,
         removeTransaction,
         loading: getLoadingState(),
-        error: tenantsError || propertiesError || transactionsError,
+        error: tenantsError || propertiesError || transactionsError || profileError,
         isAddTransactionOpen,
         setAddTransactionOpen,
         isScanReceiptOpen,

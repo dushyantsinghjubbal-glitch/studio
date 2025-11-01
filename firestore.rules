@@ -1,18 +1,22 @@
 /**
  * @file Firestore Security Rules
- * @description This ruleset enforces a basic authenticated access model.
+ * @description This ruleset enforces authenticated access and user ownership.
  *
  * Core Philosophy:
- * Only authenticated users can read or write data. Data shape is not strictly enforced.
+ * Only authenticated users can access data. Users can only read/write their own
+ * profile data. Data for properties, tenants, and transactions is accessible
+ * to any authenticated user, assuming a single-owner model for the app.
  *
  * Data Structure:
- * - /properties/{propertyId}: Stores property information. Accessible to authenticated users.
- * - /tenants/{tenantId}: Stores tenant information. Accessible to authenticated users.
- * - /transactions/{transactionId}: Stores transaction data. Accessible to authenticated users.
+ * - /users/{userId}: Stores user-specific profile info. Only accessible by that user.
+ * - /properties/{propertyId}: Stores property information. Accessible to any authenticated user.
+ * - /tenants/{tenantId}: Stores tenant information. Accessible to any authenticated user.
+ * - /transactions/{transactionId}: Stores transaction data. Accessible to any authenticated user.
  *
  * Key Security Decisions:
- * - No user-specific ownership or roles are enforced in this initial prototype.
- * - Data validation is minimal, focusing on authentication.
+ * - User data in `/users` is strictly private to the owner.
+ * - All other data collections assume a single-landlord model where any logged-in
+ *   user (the landlord) can manage all properties, tenants, etc.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -26,104 +30,62 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
+    
+    /**
+     * @function isOwner
+     * @description Checks if the requesting user is the owner of the document.
+     * @param {string} userId - The UID of the user to check against.
+     * @return {boolean} True if the request auth UID matches the userId.
+     */
+    function isOwner(userId) {
+        return request.auth.uid == userId;
+    }
+
+    /**
+     * @description Controls access to the 'users' collection.
+     * @path /users/{userId}
+     * @allow (get) A user can read their own profile.
+     * @deny (get) A user cannot read another user's profile.
+     * @allow (create) A user can create their own profile.
+     * @deny (create) A user cannot create a profile for someone else.
+     * @allow (update) A user can update their own profile.
+     * @deny (update) A user cannot update another user's profile.
+     * @deny (delete) No user can delete a profile.
+     * @principle Enforces strict user ownership for profile data.
+     */
+    match /users/{userId} {
+      allow get, create, update: if isSignedIn() && isOwner(userId);
+      allow delete: if false; // Profiles cannot be deleted
+    }
 
     /**
      * @description Controls access to the 'properties' collection.
      * @path /properties/{propertyId}
-     * @allow (get) Authenticated user can read a specific property.
-     *   Example: User with UID 'abc' can get /properties/xyz.
-     * @deny (get) Unauthenticated user cannot read a specific property.
-     *   Example: Anonymous user cannot get /properties/xyz.
-     * @allow (list) Authenticated user can list properties.
-     *   Example: User with UID 'abc' can list all documents in /properties.
-     * @deny (list) Unauthenticated user cannot list properties.
-     *   Example: Anonymous user cannot list all documents in /properties.
-     * @allow (create) Authenticated user can create a property.
-     *   Example: User with UID 'abc' can create a new property document.
-     * @deny (create) Unauthenticated user cannot create a property.
-     *   Example: Anonymous user cannot create a new property document.
-     * @allow (update) Authenticated user can update a property.
-     *   Example: User with UID 'abc' can update /properties/xyz.
-     * @deny (update) Unauthenticated user cannot update a property.
-     *   Example: Anonymous user cannot update /properties/xyz.
-     * @allow (delete) Authenticated user can delete a property.
-     *   Example: User with UID 'abc' can delete /properties/xyz.
-     * @deny (delete) Unauthenticated user cannot delete a property.
-     *   Example: Anonymous user cannot delete /properties/xyz.
+     * @allow (*) Authenticated users can perform any operation.
      * @principle Requires authentication for all read and write operations.
      */
     match /properties/{propertyId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+      allow read, write: if isSignedIn();
     }
 
     /**
      * @description Controls access to the 'tenants' collection.
      * @path /tenants/{tenantId}
-     * @allow (get) Authenticated user can read a specific tenant.
-     *   Example: User with UID 'abc' can get /tenants/xyz.
-     * @deny (get) Unauthenticated user cannot read a specific tenant.
-     *   Example: Anonymous user cannot get /tenants/xyz.
-     * @allow (list) Authenticated user can list tenants.
-     *   Example: User with UID 'abc' can list all documents in /tenants.
-     * @deny (list) Unauthenticated user cannot list tenants.
-     *   Example: Anonymous user cannot list all documents in /tenants.
-     * @allow (create) Authenticated user can create a tenant.
-     *   Example: User with UID 'abc' can create a new tenant document.
-     * @deny (create) Unauthenticated user cannot create a tenant.
-     *   Example: Anonymous user cannot create a new tenant document.
-     * @allow (update) Authenticated user can update a tenant.
-     *   Example: User with UID 'abc' can update /tenants/xyz.
-     * @deny (update) Unauthenticated user cannot update a tenant.
-     *   Example: Anonymous user cannot update /tenants/xyz.
-     * @allow (delete) Authenticated user can delete a tenant.
-     *   Example: User with UID 'abc' can delete /tenants/xyz.
-     * @deny (delete) Unauthenticated user cannot delete a tenant.
-     *   Example: Anonymous user cannot delete /tenants/xyz.
+     * @allow (*) Authenticated users can perform any operation.
      * @principle Requires authentication for all read and write operations.
      */
     match /tenants/{tenantId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+      allow read, write: if isSignedIn();
     }
 
     /**
      * @description Controls access to the 'transactions' collection.
      * @path /transactions/{transactionId}
-     * @allow (get) Authenticated user can read a specific transaction.
-     *   Example: User with UID 'abc' can get /transactions/xyz.
-     * @deny (get) Unauthenticated user cannot read a specific transaction.
-     *   Example: Anonymous user cannot get /transactions/xyz.
-     * @allow (list) Authenticated user can list transactions.
-     *   Example: User with UID 'abc' can list all documents in /transactions.
-     * @deny (list) Unauthenticated user cannot list transactions.
-     *   Example: Anonymous user cannot list all documents in /transactions.
-     * @allow (create) Authenticated user can create a transaction.
-     *   Example: User with UID 'abc' can create a new transaction document.
-     * @deny (create) Unauthenticated user cannot create a transaction.
-     *   Example: Anonymous user cannot create a new transaction document.
-     * @allow (update) Authenticated user can update a transaction.
-     *   Example: User with UID 'abc' can update /transactions/xyz.
-     * @deny (update) Unauthenticated user cannot update a transaction.
-     *   Example: Anonymous user cannot update /transactions/xyz.
-     * @allow (delete) Authenticated user can delete a transaction.
-     *   Example: User with UID 'abc' can delete /transactions/xyz.
-     * @deny (delete) Unauthenticated user cannot delete a transaction.
-     *   Example: Anonymous user cannot delete /transactions/xyz.
+     * @allow (*) Authenticated users can perform any operation.
      * @principle Requires authentication for all read and write operations.
      */
     match /transactions/{transactionId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+      allow read, write: if isSignedIn();
     }
   }
 }

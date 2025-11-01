@@ -4,12 +4,12 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarItem, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import Link from 'next/link';
-import { Home, Users, Building, LogOut, Wallet, Plus, Receipt, FileText } from 'lucide-react';
+import { Home, Users, Building, LogOut, Wallet, Plus, Receipt, FileText, User as UserIcon, Cog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppDataContext, AppDataProvider, Tenant, Transaction } from '@/context/AppDataContext';
 import { FirebaseClientProvider, useUser, useAuth } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { signOut } from 'firebase/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { usePathname, useRouter } from 'next/navigation';
@@ -57,7 +57,7 @@ type ReceiptFormValues = z.infer<typeof receiptSchema>;
 
 function GlobalDialogs() {
     const { 
-        properties, tenants, transactions, addTransaction, updateTransaction, triggerReceiptGeneration,
+        properties, tenants, transactions, addTransaction, updateTransaction, triggerReceiptGeneration, userProfile,
         isAddTransactionOpen, setAddTransactionOpen, 
         isScanReceiptOpen, setScanReceiptOpen, 
         isGenerateReceiptOpen, setGenerateReceiptOpen,
@@ -230,11 +230,12 @@ function GlobalDialogs() {
         await triggerReceiptGeneration(tenant.id, data.month, data.paymentDate);
 
         const doc = new jsPDF();
+        const businessName = userProfile?.businessName || 'FinProp';
         
         // Header
         doc.setFontSize(22);
         doc.setFont('helvetica', 'bold');
-        doc.text("FinProp", 105, 20, { align: 'center' });
+        doc.text(businessName, 105, 20, { align: 'center' });
         doc.setFontSize(16);
         doc.setFont('helvetica', 'normal');
         doc.text("Rent Receipt", 105, 30, { align: 'center' });
@@ -300,8 +301,8 @@ function GlobalDialogs() {
             {/* AI Receipt Scanner Dialog */}
             <Dialog open={isScanReceiptOpen} onOpenChange={(open) => { if (!isProcessing) setScanReceiptOpen(open); }}>
                 <DialogContent 
-                    onInteractOutside={(e) => { if (isProcessing) e.preventDefault(); }}
-                    onEscapeKeyDown={(e) => { if (isProcessing) e.preventDefault(); }}
+                    onInteractOutside={(e) => { if (isProcessing || isScanReceiptOpen) e.preventDefault(); }}
+                    onEscapeKeyDown={(e) => { if (isProcessing || isScanReceiptOpen) e.preventDefault(); }}
                 >
                     <DialogHeader>
                         <DialogTitle>Scan Receipt with AI</DialogTitle>
@@ -357,8 +358,8 @@ function GlobalDialogs() {
                  }
              }}>
                 <DialogContent className="sm:max-w-md" 
-                 onInteractOutside={(e) => e.preventDefault()}
-                 onEscapeKeyDown={(e) => e.preventDefault()}>
+                 onInteractOutside={(e) => {if(isAddTransactionOpen) e.preventDefault()}}
+                 onEscapeKeyDown={(e) => {if(isAddTransactionOpen) e.preventDefault()}}>
                     <DialogHeader>
                         <DialogTitle>{editingTransaction ? 'Edit Transaction' : (extractedData ? 'Confirm Transaction' : 'Add Transaction')}</DialogTitle>
                         <DialogDescription>
@@ -469,7 +470,7 @@ function GlobalDialogs() {
                     setGenerateReceiptOpen(true);
                  }
             }}>
-                <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+                <DialogContent className="sm:max-w-md" onInteractOutside={(e) => {if(isGenerateReceiptOpen) e.preventDefault()}} onEscapeKeyDown={(e) => {if(isGenerateReceiptOpen) e.preventDefault()}}>
                     <DialogHeader>
                         <DialogTitle>Generate Rent Receipt</DialogTitle>
                         <DialogDescription>Select a tenant and payment details to generate a PDF receipt.</DialogDescription>
@@ -534,6 +535,7 @@ function GlobalDialogs() {
 function UserMenu() {
     const { user } = useUser();
     const auth = useAuth();
+    const router = useRouter();
 
     if (!user || user.isAnonymous) {
         return (
@@ -575,6 +577,11 @@ function UserMenu() {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
+                 <DropdownMenuItem onClick={() => router.push('/profile')}>
+                    <Cog className="mr-2 h-4 w-4" />
+                    <span>Profile Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
