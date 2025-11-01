@@ -1,3 +1,4 @@
+
 'use client';
 
 import './globals.css';
@@ -769,11 +770,49 @@ function SidebarNav() {
 function MobileHeader({ onMenuClick }: { onMenuClick: () => void }) {
     return (
         <header className="md:hidden sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-lg px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-            <Button size="icon" variant="outline" className="sm:hidden" onClick={onMenuClick}>
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle Menu</span>
-            </Button>
-            <div className="flex items-center gap-2">
+            <Sheet>
+                <SheetTrigger asChild>
+                    <Button size="icon" variant="outline" className="sm:hidden">
+                        <Menu className="h-5 w-5" />
+                        <span className="sr-only">Toggle Menu</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="sm:max-w-xs">
+                   <SheetHeader>
+                        <SheetTitle className="sr-only">Menu</SheetTitle>
+                    </SheetHeader>
+                    <nav className="grid gap-6 text-lg font-medium">
+                        <Link
+                            href="#"
+                            className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
+                        >
+                            <Building className="h-5 w-5 transition-all group-hover:scale-110" />
+                            <span className="sr-only">FinProp</span>
+                        </Link>
+                        <Link href="/" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+                            <Home className="h-5 w-5" />
+                            Dashboard
+                        </Link>
+                        <Link href="/ledger" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+                            <Book className="h-5 w-5" />
+                            Ledger
+                        </Link>
+                        <Link href="/tenants" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+                            <Users className="h-5 w-5" />
+                            Tenants
+                        </Link>
+                        <Link href="/properties" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+                            <Building className="h-5 w-5" />
+                            Properties
+                        </Link>
+                         <Link href="/profile" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+                            <Cog className="h-5 w-5" />
+                            Settings
+                        </Link>
+                    </nav>
+                </SheetContent>
+            </Sheet>
+             <div className="flex items-center gap-2">
                 <div className="bg-gradient-to-r from-blue-400 to-purple-500 p-2 rounded-lg text-white font-bold text-base">
                     FP
                 </div>
@@ -875,7 +914,7 @@ function MobileSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (ope
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/50 z-40"
+                        className="fixed inset-0 bg-black/50 z-40 md:hidden"
                         onClick={() => setIsOpen(false)}
                     />
                     <motion.aside
@@ -883,7 +922,7 @@ function MobileSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (ope
                         initial="closed"
                         animate="open"
                         exit="closed"
-                        className="fixed left-0 top-0 h-screen w-64 bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg flex flex-col py-6 px-4 rounded-r-3xl z-50"
+                        className="fixed left-0 top-0 h-full w-64 bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg flex flex-col py-6 px-4 rounded-r-3xl z-50 md:hidden"
                     >
                          <motion.div
                             className="mb-8 flex items-center gap-2"
@@ -990,16 +1029,16 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <body className="font-body antialiased overflow-hidden" style={{ fontFamily: "'Poppins', sans-serif" }}>
         <FirebaseClientProvider>
           <AppDataProvider>
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-950 dark:to-black text-gray-800 dark:text-gray-100 transition-colors duration-500 font-sans">
+            <div className="h-screen flex bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-950 dark:to-black text-gray-800 dark:text-gray-100 transition-colors duration-500 font-sans">
                 <div className="hidden md:block">
                   <SidebarNav />
                 </div>
                 <MobileSidebar isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
                 
-                <div className="flex flex-col md:ml-60">
+                <div className="flex flex-col flex-1 md:ml-60 overflow-y-auto">
                     <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
                     <main className="flex-1 p-6 md:p-10 relative">
                         {children}
