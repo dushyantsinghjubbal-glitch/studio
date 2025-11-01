@@ -999,9 +999,9 @@ export default function RootLayout({
                 </div>
                 <MobileSidebar isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
                 
-                <div className="flex flex-col flex-1 md:ml-60">
+                <div className="flex flex-col md:ml-60">
                     <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
-                    <main className="flex-1 p-6 md:p-10 overflow-y-auto relative">
+                    <main className="flex-1 p-6 md:p-10 relative">
                         {children}
                     </main>
                 </div>
