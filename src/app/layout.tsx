@@ -235,6 +235,7 @@ function GlobalDialogs() {
         const businessPhone = userProfile?.businessPhone || '';
         const businessEmail = userProfile?.businessEmail || '';
         const upiId = userProfile?.upiId || '';
+        const bankDetails = userProfile?.bankDetails || '';
     
         // Header
         doc.setFontSize(22);
@@ -300,8 +301,20 @@ function GlobalDialogs() {
         doc.text("Notes / Payment Instructions:", 20, finalY);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text("Thank you for your timely payment.", 20, finalY + 7);
-        if(upiId) doc.text(`You can pay via UPI to: ${upiId}`, 20, finalY + 12);
+        
+        let instructionY = finalY + 7;
+        doc.text("Thank you for your timely payment.", 20, instructionY);
+        instructionY += 5;
+
+        if (upiId) {
+            doc.text(`You can pay via UPI to: ${upiId}`, 20, instructionY);
+            instructionY += 5;
+        }
+        if (bankDetails) {
+            doc.text("Bank Details:", 20, instructionY);
+            instructionY += 5;
+            doc.text(bankDetails, 20, instructionY, { maxWidth: 170 });
+        }
     
     
         // Footer

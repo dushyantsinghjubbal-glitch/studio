@@ -263,6 +263,10 @@
         "upiId": {
             "type": "string",
             "description": "UPI ID for receiving digital payments, to be displayed on receipts."
+        },
+        "bankDetails": {
+            "type": "string",
+            "description": "Bank account details for receiving payments, to be displayed on receipts."
         }
       }
     }

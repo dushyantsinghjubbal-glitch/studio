@@ -20,6 +20,7 @@ const profileSchema = z.object({
   businessPhone: z.string().optional(),
   businessEmail: z.string().email({ message: "Invalid email address" }).optional().or(z.literal('')),
   upiId: z.string().optional(),
+  bankDetails: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -37,6 +38,7 @@ export default function ProfilePage() {
       businessPhone: '',
       businessEmail: '',
       upiId: '',
+      bankDetails: '',
     },
   });
 
@@ -49,6 +51,7 @@ export default function ProfilePage() {
         businessPhone: userProfile.businessPhone || '',
         businessEmail: userProfile.businessEmail || '',
         upiId: userProfile.upiId || '',
+        bankDetails: userProfile.bankDetails || '',
       });
     }
   }, [userProfile, form]);
@@ -87,7 +90,7 @@ export default function ProfilePage() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
             <Card>
             <CardHeader>
-                <CardTitle>Business Information</CardTitle>
+                <CardTitle>Business & Owner Information</CardTitle>
                 <CardDescription>
                 This information will be displayed on your rental receipts.
                 </CardDescription>
@@ -143,12 +146,26 @@ export default function ProfilePage() {
                         )}
                     </div>
                 </div>
+                <CardHeader className="px-0 py-2">
+                    <CardTitle>Payment Details</CardTitle>
+                    <CardDescription>
+                        This payment information will be displayed on your rental receipts for tenants.
+                    </CardDescription>
+                </CardHeader>
                  <div className="space-y-2">
-                    <Label htmlFor="upiId">UPI ID (for payments)</Label>
+                    <Label htmlFor="upiId">UPI ID</Label>
                     <Input
                     id="upiId"
                     placeholder="your-business@bank"
                     {...form.register('upiId')}
+                    />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="bankDetails">Bank Details</Label>
+                    <Textarea
+                    id="bankDetails"
+                    placeholder="Account Name: ...&#10;Account Number: ...&#10;IFSC Code: ...&#10;Bank Name: ..."
+                    {...form.register('bankDetails')}
                     />
                 </div>
                  <Button type="submit" disabled={form.formState.isSubmitting}>

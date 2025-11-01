@@ -66,6 +66,7 @@ export type UserProfile = {
     businessPhone?: string;
     businessEmail?: string;
     upiId?: string;
+    bankDetails?: string;
 }
 
 
