@@ -683,7 +683,7 @@ function SidebarNav() {
 
 
     return (
-        <aside className="fixed left-0 top-0 h-screen w-20 md:w-60 bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg flex flex-col items-center md:items-start py-6 px-2 rounded-r-3xl border-r border-purple-100 dark:border-gray-800 z-40">
+        <aside className="fixed left-0 top-0 h-full w-20 md:w-60 bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg flex flex-col items-center md:items-start py-6 px-2 rounded-r-3xl border-r border-purple-100 dark:border-gray-800 z-40">
             <motion.div
               className="mb-8 flex items-center gap-2"
               initial={{ scale: 0 }}
@@ -768,50 +768,51 @@ function SidebarNav() {
 }
 
 function MobileHeader({ onMenuClick }: { onMenuClick: () => void }) {
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     return (
         <header className="md:hidden sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-lg px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-            <Sheet>
-                <SheetTrigger asChild>
-                    <Button size="icon" variant="outline" className="sm:hidden">
-                        <Menu className="h-5 w-5" />
-                        <span className="sr-only">Toggle Menu</span>
-                    </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="sm:max-w-xs">
-                   <SheetHeader>
-                        <SheetTitle className="sr-only">Menu</SheetTitle>
-                    </SheetHeader>
-                    <nav className="grid gap-6 text-lg font-medium">
-                        <Link
-                            href="#"
-                            className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
-                        >
-                            <Building className="h-5 w-5 transition-all group-hover:scale-110" />
-                            <span className="sr-only">FinProp</span>
-                        </Link>
-                        <Link href="/" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
-                            <Home className="h-5 w-5" />
-                            Dashboard
-                        </Link>
-                        <Link href="/ledger" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
-                            <Book className="h-5 w-5" />
-                            Ledger
-                        </Link>
-                        <Link href="/tenants" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
-                            <Users className="h-5 w-5" />
-                            Tenants
-                        </Link>
-                        <Link href="/properties" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
-                            <Building className="h-5 w-5" />
-                            Properties
-                        </Link>
-                         <Link href="/profile" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
-                            <Cog className="h-5 w-5" />
-                            Settings
-                        </Link>
-                    </nav>
-                </SheetContent>
-            </Sheet>
+                <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                    <SheetTrigger asChild>
+                        <Button size="icon" variant="outline" className="sm:hidden">
+                            <Menu className="h-5 w-5" />
+                            <span className="sr-only">Toggle Menu</span>
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="sm:max-w-xs">
+                       <SheetHeader>
+                            <SheetTitle className="sr-only">Menu</SheetTitle>
+                        </SheetHeader>
+                        <nav className="grid gap-6 text-lg font-medium">
+                            <Link
+                                href="#"
+                                className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
+                            >
+                                <Building className="h-5 w-5 transition-all group-hover:scale-110" />
+                                <span className="sr-only">FinProp</span>
+                            </Link>
+                            <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+                                <Home className="h-5 w-5" />
+                                Dashboard
+                            </Link>
+                            <Link href="/ledger" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+                                <Book className="h-5 w-5" />
+                                Ledger
+                            </Link>
+                            <Link href="/tenants" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+                                <Users className="h-5 w-5" />
+                                Tenants
+                            </Link>
+                            <Link href="/properties" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+                                <Building className="h-5 w-5" />
+                                Properties
+                            </Link>
+                             <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+                                <Cog className="h-5 w-5" />
+                                Settings
+                            </Link>
+                        </nav>
+                    </SheetContent>
+                </Sheet>
              <div className="flex items-center gap-2">
                 <div className="bg-gradient-to-r from-blue-400 to-purple-500 p-2 rounded-lg text-white font-bold text-base">
                     FP
@@ -821,195 +822,6 @@ function MobileHeader({ onMenuClick }: { onMenuClick: () => void }) {
                 </span>
             </div>
         </header>
-    );
-}
-
-const variants = {
-    open: {
-        x: 0,
-        transition: {
-            type: "spring",
-            stiffness: 300,
-            damping: 30
-        }
-    },
-    closed: {
-        x: "-100%",
-        transition: {
-            type: "spring",
-            stiffness: 300,
-            damping: 30
-        }
-    }
-};
-
-const itemVariants = {
-    open: {
-        opacity: 1,
-        y: 0,
-        transition: { type: "spring", stiffness: 300, damping: 24 }
-    },
-    closed: { opacity: 0, y: 20, transition: { duration: 0.2 } }
-};
-
-
-function MobileSidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (open: boolean) => void }) {
-    const { user } = useUser();
-    const auth = useAuth();
-    const router = useRouter();
-    const [darkMode, setDarkMode] = useState(false);
-
-    useEffect(() => {
-        const isDark = document.documentElement.classList.contains('dark');
-        setDarkMode(isDark);
-    }, []);
-
-    const toggleDarkMode = () => {
-        if (darkMode) {
-            document.documentElement.classList.remove("dark");
-        } else {
-            document.documentElement.classList.add("dark");
-        }
-        setDarkMode(!darkMode);
-    };
-
-    const handleSignOut = async () => {
-        if (auth) {
-            await signOut(auth);
-            router.push('/login');
-        }
-    };
-    
-     const getInitials = (name?: string | null, email?: string | null) => {
-        if (name) {
-            const nameParts = name.split(' ');
-            if (nameParts.length > 1) {
-                return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
-            }
-            return name.substring(0, 2).toUpperCase();
-        }
-        if (email) {
-            return email.substring(0, 2).toUpperCase();
-        }
-        return 'U';
-    };
-
-    const menuItems = [
-      { name: "Dashboard", icon: Home, href: "/" },
-      { name: "Ledger", icon: Book, href: "/ledger" },
-      { name: "Tenants", icon: Users, href: "/tenants" },
-      { name: "Properties", icon: Building, href: "/properties" },
-    ];
-    
-     const handleLinkClick = (href: string) => {
-        router.push(href);
-        setIsOpen(false);
-    };
-
-    return (
-        <AnimatePresence>
-            {isOpen && (
-                <>
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/50 z-40 md:hidden"
-                        onClick={() => setIsOpen(false)}
-                    />
-                    <motion.aside
-                        variants={variants}
-                        initial="closed"
-                        animate="open"
-                        exit="closed"
-                        className="fixed left-0 top-0 h-full w-64 bg-white/70 dark:bg-gray-900/60 backdrop-blur-lg shadow-lg flex flex-col py-6 px-4 rounded-r-3xl z-50 md:hidden"
-                    >
-                         <motion.div
-                            className="mb-8 flex items-center gap-2"
-                            variants={itemVariants}
-                        >
-                            <div className="bg-gradient-to-r from-blue-400 to-purple-500 p-3 rounded-2xl shadow-md text-white font-bold text-lg">
-                                FP
-                            </div>
-                            <span className="font-semibold text-gray-700 dark:text-gray-200">
-                                FinProp
-                            </span>
-                        </motion.div>
-                        
-                        <motion.nav
-                            initial="closed"
-                            animate="open"
-                            variants={{ open: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } } }}
-                            className="flex flex-col gap-4 w-full flex-1"
-                        >
-                            {menuItems.map((item) => (
-                                <motion.div key={item.name} variants={itemVariants}>
-                                    <button
-                                        onClick={() => handleLinkClick(item.href)}
-                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all"
-                                    >
-                                        <item.icon className="text-blue-500 bg-blue-100 dark:text-blue-300 dark:bg-gray-800 p-2 rounded-xl" size={28} />
-                                        <span className="font-medium">{item.name}</span>
-                                    </button>
-                                </motion.div>
-                            ))}
-                        </motion.nav>
-                         <motion.div
-                            initial="closed"
-                            animate="open"
-                            variants={{ open: { transition: { staggerChildren: 0.07, delayChildren: 0.4 } } }}
-                            className="flex flex-col gap-2 w-full"
-                        >
-                            <motion.button variants={itemVariants}
-                              onClick={toggleDarkMode}
-                              className="flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all"
-                              title="Toggle dark mode"
-                            >
-                                {darkMode ? (
-                                    <Sun className="text-yellow-400 bg-gray-800 p-2 rounded-xl" size={28} />
-                                ) : (
-                                    <Moon className="text-indigo-500 bg-blue-100 p-2 rounded-xl" size={28} />
-                                )}
-                                 <span className="font-medium">
-                                    Toggle Theme
-                                </span>
-                            </motion.button>
-                             {user && !user.isAnonymous && (
-                                 <motion.div variants={itemVariants}>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                             <div
-                                                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 dark:hover:from-gray-800 dark:hover:to-gray-700 transition-all"
-                                              >
-                                                <Avatar className="h-10 w-10 border-2 border-primary">
-                                                    <AvatarImage src={`https://api.dicebear.com/8.x/adventurer/svg?seed=${user.uid}`} alt={user.displayName || user.email || 'User'} />
-                                                    <AvatarFallback>{getInitials(user.displayName, user.email)}</AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex flex-col text-left">
-                                                     <span className="font-medium text-sm truncate max-w-28">{user.displayName || user.email}</span>
-                                                     <span className="text-xs text-muted-foreground">View Profile</span>
-                                                </div>
-                                              </div>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent className="w-56 mb-2 ml-2" align="start" side="right" forceMount>
-                                             <DropdownMenuItem onClick={() => { handleLinkClick('/profile'); }}>
-                                                <Cog className="mr-2 h-4 w-4" />
-                                                <span>Profile Settings</span>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={handleSignOut}>
-                                                <LogOut className="mr-2 h-4 w-4" />
-                                                <span>Log out</span>
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </motion.div>
-                            )}
-                        </motion.div>
-                    </motion.aside>
-                </>
-            )}
-        </AnimatePresence>
     );
 }
 
@@ -1029,18 +841,16 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased overflow-hidden" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <body className="font-body antialiased" style={{ fontFamily: "'Poppins', sans-serif" }}>
         <FirebaseClientProvider>
           <AppDataProvider>
-            <div className="h-screen flex bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-950 dark:to-black text-gray-800 dark:text-gray-100 transition-colors duration-500 font-sans">
+            <div className="relative h-[100vh] overflow-hidden bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 dark:from-gray-900 dark:via-gray-950 dark:to-black text-gray-800 dark:text-gray-100 transition-colors duration-500 font-sans">
                 <div className="hidden md:block">
                   <SidebarNav />
                 </div>
-                <MobileSidebar isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
-                
-                <div className="flex flex-col flex-1 md:ml-60 overflow-y-auto">
+                <div className="flex flex-col flex-1 md:ml-60 h-full">
                     <MobileHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
-                    <main className="flex-1 p-6 md:p-10 relative">
+                    <main className="flex-1 p-6 md:p-10 relative overflow-y-auto">
                         {children}
                     </main>
                 </div>
@@ -1054,3 +864,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    
