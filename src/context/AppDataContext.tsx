@@ -61,6 +61,11 @@ export type Transaction = {
 
 export type UserProfile = {
     businessName?: string;
+    ownerName?: string;
+    businessAddress?: string;
+    businessPhone?: string;
+    businessEmail?: string;
+    upiId?: string;
 }
 
 

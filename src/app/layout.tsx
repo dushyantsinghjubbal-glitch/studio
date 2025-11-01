@@ -225,72 +225,96 @@ function GlobalDialogs() {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected tenant.' });
             return;
         }
-
-        // Trigger the payment cycle start
+    
         await triggerReceiptGeneration(tenant.id, data.month, data.paymentDate);
-
+    
         const doc = new jsPDF();
         const businessName = userProfile?.businessName || 'FinProp';
-        
+        const ownerName = userProfile?.ownerName || '';
+        const businessAddress = userProfile?.businessAddress || '';
+        const businessPhone = userProfile?.businessPhone || '';
+        const businessEmail = userProfile?.businessEmail || '';
+        const upiId = userProfile?.upiId || '';
+    
         // Header
         doc.setFontSize(22);
         doc.setFont('helvetica', 'bold');
         doc.text(businessName, 105, 20, { align: 'center' });
-        doc.setFontSize(16);
+    
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text("Rent Receipt", 105, 30, { align: 'center' });
-
+        if (ownerName) doc.text(ownerName, 105, 26, { align: 'center' });
+        if (businessAddress) doc.text(businessAddress, 105, 31, { align: 'center' });
+    
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text("Rent Receipt", 105, 45, { align: 'center' });
+    
         // Information
         doc.setFontSize(12);
-        doc.text(`Receipt #: ${new Date().getTime()}`, 20, 50);
-        doc.text(`Generated On: ${format(new Date(), 'PPP')}`, 190, 50, { align: 'right' });
-
+        doc.text(`Receipt #: ${new Date().getTime()}`, 20, 60);
+        doc.text(`Date: ${format(data.paymentDate, 'PPP')}`, 190, 60, { align: 'right' });
+    
         // Line separator
         doc.setLineWidth(0.5);
-        doc.line(20, 55, 190, 55);
-
-        // Tenant and Property Info
+        doc.line(20, 65, 190, 65);
+    
+        // Billed To Section
         doc.setFont('helvetica', 'bold');
-        doc.text("TENANT:", 20, 70);
+        doc.text("BILLED TO:", 20, 75);
         doc.setFont('helvetica', 'normal');
-        doc.text(tenant.name, 50, 70);
-        
-        doc.setFont('helvetica', 'bold');
-        doc.text("PROPERTY:", 20, 80);
-        doc.setFont('helvetica', 'normal');
-        doc.text(tenant.propertyName, 50, 80);
+        doc.text(tenant.name, 20, 82);
+        doc.text(tenant.propertyName, 20, 87);
         if (tenant.propertyAddress) {
-             doc.text(tenant.propertyAddress, 50, 85);
+            doc.text(tenant.propertyAddress, 20, 92);
         }
-
-        // Line separator
-        doc.line(20, 95, 190, 95);
-
+    
         // Payment Details Table
         (doc as any).autoTable({
-            startY: 100,
+            startY: 105,
             head: [['Description', 'Amount']],
             body: [
                 [`Rent for the month of ${data.month}`, `₹${tenant.rentAmount.toLocaleString()}`],
+                [`Maintenance Charges`, `₹0.00`],
             ],
             theme: 'striped',
             headStyles: { fillColor: [33, 150, 243] },
+            didDrawCell: (data: any) => {
+                if (data.section === 'body' && data.column.index === 1) {
+                    doc.setFont('helvetica', 'bold');
+                }
+            }
         });
-
+    
         // Total
         let finalY = (doc as any).lastAutoTable.finalY;
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.text("Total Due:", 140, finalY + 10);
-        doc.text(`₹${tenant.rentAmount.toLocaleString()}`, 190, finalY + 10, { align: 'right' });
-        
-        // Footer
+        doc.text("Total Amount:", 130, finalY + 15, { align: 'right' });
+        doc.text(`₹${tenant.rentAmount.toLocaleString()}`, 190, finalY + 15, { align: 'right' });
+    
+        // Payment Instructions / Notes
+        finalY = finalY + 30; // Add some space
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text("Notes / Payment Instructions:", 20, finalY);
         doc.setFontSize(10);
-        doc.setTextColor(150);
-        doc.text("Thank you for your business!", 105, 280, { align: 'center' });
-
+        doc.setFont('helvetica', 'normal');
+        doc.text("Thank you for your timely payment.", 20, finalY + 7);
+        if(upiId) doc.text(`You can pay via UPI to: ${upiId}`, 20, finalY + 12);
+    
+    
+        // Footer
+        finalY = doc.internal.pageSize.height - 30;
+        doc.setLineWidth(0.5);
+        doc.line(20, finalY, 190, finalY);
+        doc.setFontSize(10);
+        const contactInfo = [businessPhone, businessEmail].filter(Boolean).join(' | ');
+        if(contactInfo) doc.text(contactInfo, 105, finalY + 10, { align: 'center' });
+        doc.text("This is a computer-generated receipt and does not require a signature.", 105, finalY + 15, { align: 'center' });
+    
         doc.save(`Receipt-${tenant.name.replace(' ', '_')}-${data.month}.pdf`);
-
+    
         toast({ title: 'Receipt Generated', description: 'The PDF receipt has been downloaded.' });
         setGenerateReceiptOpen(false);
         receiptForm.reset();
@@ -299,10 +323,10 @@ function GlobalDialogs() {
     return (
         <>
             {/* AI Receipt Scanner Dialog */}
-            <Dialog open={isScanReceiptOpen} onOpenChange={(open) => { if (!isProcessing) setScanReceiptOpen(open); }}>
+            <Dialog open={isScanReceiptOpen} onOpenChange={(open) => { if (!open) setScanReceiptOpen(open); }}>
                 <DialogContent 
-                    onInteractOutside={(e) => { if (isProcessing) e.preventDefault(); }}
-                    onEscapeKeyDown={(e) => { if (isProcessing) e.preventDefault(); }}
+                    onInteractOutside={(e) => { if (isProcessing || isScanReceiptOpen) e.preventDefault(); }}
+                    onEscapeKeyDown={(e) => { if (isProcessing || isScanReceiptOpen) e.preventDefault(); }}
                 >
                     <DialogHeader>
                         <DialogTitle>Scan Receipt with AI</DialogTitle>
@@ -358,8 +382,8 @@ function GlobalDialogs() {
                  }
              }}>
                 <DialogContent className="sm:max-w-md" 
-                 onInteractOutside={(e) => { e.preventDefault()}}
-                 onEscapeKeyDown={(e) => { e.preventDefault()}}>
+                 onInteractOutside={(e) => { if (isAddTransactionOpen) e.preventDefault()}}
+                 onEscapeKeyDown={(e) => { if (isAddTransactionOpen) e.preventDefault()}}>
                     <DialogHeader>
                         <DialogTitle>{editingTransaction ? 'Edit Transaction' : (extractedData ? 'Confirm Transaction' : 'Add Transaction')}</DialogTitle>
                         <DialogDescription>
@@ -470,7 +494,7 @@ function GlobalDialogs() {
                     setGenerateReceiptOpen(true);
                  }
             }}>
-                <DialogContent className="sm:max-w-md" onInteractOutside={(e) => { e.preventDefault()}} onEscapeKeyDown={(e) => { e.preventDefault()}}>
+                <DialogContent className="sm:max-w-md" onInteractOutside={(e) => { if (isGenerateReceiptOpen) e.preventDefault()}} onEscapeKeyDown={(e) => { if (isGenerateReceiptOpen) e.preventDefault()}}>
                     <DialogHeader>
                         <DialogTitle>Generate Rent Receipt</DialogTitle>
                         <DialogDescription>Select a tenant and payment details to generate a PDF receipt.</DialogDescription>
